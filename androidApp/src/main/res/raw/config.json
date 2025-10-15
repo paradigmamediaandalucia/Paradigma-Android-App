@@ -1,0 +1,8 @@
+{
+  "spreakerApiBaseUrl": "https://api.spreaker.com/v2/",
+  "spreakerUserId": "10433183",
+  "spreakerApiToken": "a8c016fb0d0b09c4ed26d60fe6351f87494189d3",
+  "mainWebsiteUrl": "https://www.paradigmaradio.org",
+  "liveStreamApiUrl": "https://radio.andaina.net/",
+  "liveStreamUrl": "https://radio.andaina.net/8042/stream"
+}
