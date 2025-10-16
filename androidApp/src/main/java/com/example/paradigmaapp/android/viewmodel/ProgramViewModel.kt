@@ -7,14 +7,17 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.example.paradigmaapp.android.data.EpisodePagingSource
 import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.model.Programa
+import com.example.paradigmaapp.model.stableListKey
 import com.example.paradigmaapp.repository.Repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -61,6 +64,13 @@ class ProgramaViewModel(
         pagingSourceFactory = { EpisodePagingSource(repository, programaId) }
     )
         .flow
+        .map { pagingData ->
+            val seenEpisodeKeys = mutableSetOf<String>()
+            pagingData.filter { episode ->
+                val key = episode.stableListKey()
+                seenEpisodeKeys.add(key)
+            }
+        }
         // Cachea los resultados en el ViewModelScope para que los datos sobrevivan a cambios
         // de configuración como la rotación de la pantalla, evitando recargas innecesarias.
         .cachedIn(viewModelScope)

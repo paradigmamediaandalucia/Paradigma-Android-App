@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.paradigmaapp.android.ui.ErrorType
 import com.example.paradigmaapp.android.ui.ErrorView
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.ui.ProgramaListItem
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.model.Programa
@@ -87,7 +88,7 @@ fun HomeScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), // Cuadrícula con dos columnas
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp), // Padding alrededor de la cuadrícula
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = LayoutConstants.bottomContentPadding + 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp), // Espacio vertical entre ítems
                     horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio horizontal entre ítems
                 ) {

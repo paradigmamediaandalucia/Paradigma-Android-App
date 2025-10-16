@@ -123,12 +123,14 @@ fun FullScreenPlayerScreen(
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = episode.description.unescapeHtmlEntities(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    if (duration > 0L) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = formatTime(duration),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Column(modifier = Modifier.fillMaxWidth()) {

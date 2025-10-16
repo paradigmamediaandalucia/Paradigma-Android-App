@@ -84,3 +84,22 @@ data class Term(
     val slug: String,
     val taxonomy: String
 )
+
+fun Episode.stableListKey(): String {
+    val trimmedId = id.trim()
+    if (trimmedId.isNotEmpty()) return trimmedId
+
+    val trimmedSlug = slug.trim()
+    if (trimmedSlug.isNotEmpty()) return "slug:$trimmedSlug"
+
+    val trimmedStreamId = streamId?.trim()
+    if (!trimmedStreamId.isNullOrEmpty()) return "stream:$trimmedStreamId"
+
+    val trimmedAudioUrl = audioUrl.trim()
+    if (trimmedAudioUrl.isNotEmpty()) return "audio:$trimmedAudioUrl"
+
+    val trimmedDownloadUrl = downloadUrl?.trim()
+    if (!trimmedDownloadUrl.isNullOrEmpty()) return "download:$trimmedDownloadUrl"
+
+    return hashCode().toString()
+}

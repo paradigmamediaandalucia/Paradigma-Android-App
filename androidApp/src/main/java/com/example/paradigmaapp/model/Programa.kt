@@ -28,6 +28,18 @@ data class ShowsResponse(
     @SerialName("next_url") val nextUrl: String? = null
 )
 
+@SuppressLint("UnsafeOptInUsageError")
+@Serializable
+data class ProgramaDetailResponse(
+    val response: ProgramaDetailWrapper
+)
+
+@SuppressLint("UnsafeOptInUsageError")
+@Serializable
+data class ProgramaDetailWrapper(
+    val show: Programa
+)
+
 
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable

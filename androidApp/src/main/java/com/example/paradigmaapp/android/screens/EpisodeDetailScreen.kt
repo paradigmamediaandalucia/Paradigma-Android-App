@@ -14,9 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,17 +47,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.compose.ui.platform.LocalConfiguration
 import coil.compose.AsyncImage
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.ui.ErrorType
 import com.example.paradigmaapp.android.ui.ErrorView
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.utils.extractMeaningfulDescription
 import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.android.viewmodel.DownloadedEpisodeViewModel
@@ -100,6 +103,9 @@ fun EpisodeDetailScreen(
     val downloadedEpisodes by downloadedViewModel.downloadedEpisodes.collectAsState()
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
 
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val halfStatusBarPadding = if (statusBarPadding > 0.dp) statusBarPadding * 0.5f else 0.dp
+
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { contentPadding ->
@@ -133,15 +139,38 @@ fun EpisodeDetailScreen(
                     val isDownloaded = downloadedEpisodes.any { it.id == episode.id }
                     val isInQueue = queueEpisodeIds.contains(episode.id)
 
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = LayoutConstants.bottomContentPadding)
+                    ) {
+                        val configuration = LocalConfiguration.current
+                        val screenWidth = configuration.screenWidthDp.dp
+                        val availableWidth = (screenWidth - 32.dp).coerceAtLeast(0.dp)
+                        val targetWidth = if (availableWidth == 0.dp) {
+                            232.dp
+                        } else {
+                            (availableWidth * 0.64f).coerceIn(174.dp, 275.dp)
+                        }
 
+                        Spacer(modifier = Modifier.height(halfStatusBarPadding))
                         AsyncImage(
-                            model = episode.imageUrl,
+                            model = episode.imageUrl ?: episode.imageOriginalUrl,
                             contentDescription = "Portada de ${episode.title.unescapeHtmlEntities()}",
-                            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(
-                                RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                            ),
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .align(Alignment.CenterHorizontally)
+                                .shadow(6.dp, RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .widthIn(max = targetWidth)
+                                .sizeIn(
+                                    minWidth = 174.dp,
+                                    minHeight = 174.dp,
+                                    maxWidth = targetWidth,
+                                    maxHeight = targetWidth
+                                )
+                                .aspectRatio(1f),
                             contentScale = ContentScale.Crop,
                             error = painterResource(R.mipmap.logo_foreground),
                             placeholder = painterResource(R.mipmap.logo_foreground)
@@ -219,7 +248,6 @@ fun EpisodeDetailScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(text = displayDescription, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Spacer(modifier = Modifier.height(160.dp))
                         }
                     }
                 }
@@ -232,9 +260,8 @@ fun EpisodeDetailScreen(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(
-                        start = 8.dp, top = WindowInsets.statusBars
-                            .asPaddingValues()
-                            .calculateTopPadding() + 8.dp
+                        start = 8.dp,
+                        top = halfStatusBarPadding + 8.dp
                     )
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), CircleShape)
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = MaterialTheme.colorScheme.onSurface) }

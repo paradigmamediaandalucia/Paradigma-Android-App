@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,6 +40,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.paradigmaapp.android.ui.EpisodeListItem
 import com.example.paradigmaapp.android.ui.ErrorView
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.ui.ProgramaInfoHeader
 import com.example.paradigmaapp.android.viewmodel.DownloadedEpisodeViewModel
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
@@ -47,6 +48,7 @@ import com.example.paradigmaapp.android.viewmodel.NotificationType
 import com.example.paradigmaapp.android.viewmodel.ProgramaViewModel
 import com.example.paradigmaapp.android.viewmodel.QueueViewModel
 import com.example.paradigmaapp.model.Episode
+import com.example.paradigmaapp.model.stableListKey
 
 /**
  * Muestra la pantalla de detalles de un programa, incluyendo su información
@@ -83,6 +85,9 @@ fun ProgramaScreen(
     // Recoge el ID del Episode que se está preparando para la reproducción.
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
 
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val halfStatusBarPadding = (statusBarPadding / 2f).coerceAtLeast(0.dp)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize()
@@ -93,14 +98,17 @@ fun ProgramaScreen(
                 .padding(contentPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            val listState = rememberLazyListState()
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                state = listState,
+                contentPadding = PaddingValues(bottom = LayoutConstants.bottomContentPadding)
             ) {
                 // Cabecera con la información del programa.
                 item {
-                    Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-                    ProgramaInfoHeader(programa = programa)
+                    Spacer(modifier = Modifier.height(halfStatusBarPadding))
+                    ProgramaInfoHeader(programa = programa, modifier = Modifier.padding(bottom = 24.dp))
 
                     if (programa != null) {
                         Text(
@@ -115,7 +123,7 @@ fun ProgramaScreen(
                 // Lista de Episodes paginados.
                 items(
                     count = lazyPagingItems.itemCount,
-                    key = lazyPagingItems.itemKey { it.id }
+                    key = lazyPagingItems.itemKey { it.stableListKey() }
                 ) { index ->
                     val episode = lazyPagingItems[index]
                     if (episode != null) {
@@ -141,6 +149,7 @@ fun ProgramaScreen(
                             onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = queueEpisodeIds.contains(episode.id),
+                            isParentScrolling = listState.isScrollInProgress,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }
@@ -159,10 +168,6 @@ fun ProgramaScreen(
                         }
                         else -> {}
                     }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(160.dp))
                 }
             }
 
@@ -192,7 +197,7 @@ fun ProgramaScreen(
                 onClick = onBackClick,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 8.dp, top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp)
+                    .padding(start = 8.dp, top = halfStatusBarPadding + 8.dp)
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), CircleShape)
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = MaterialTheme.colorScheme.onSurface)

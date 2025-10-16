@@ -53,7 +53,7 @@ fun String.stripHtmlTags(): String {
  * @param maxLength La longitud máxima deseada para la descripción si no se encuentra un párrafo.
  * @return Una [String] limpia y, si es necesario, truncada.
  */
-fun String.extractMeaningfulDescription(maxLength: Int = 350): String {
+fun String.extractMeaningfulDescription(maxLength: Int? = null): String {
     val decodedHtml = this.unescapeHtmlEntities()
     val firstParagraphRegex = Regex("<p[^>]*>(.*?)</p>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     val paragraphMatch = firstParagraphRegex.find(decodedHtml)
@@ -63,12 +63,13 @@ fun String.extractMeaningfulDescription(maxLength: Int = 350): String {
         meaningfulText = paragraphMatch.groupValues[1].stripHtmlTags().trim()
     } else {
         meaningfulText = decodedHtml.stripHtmlTags().trim()
-        if (meaningfulText.length > maxLength) {
-            val trimPosition = meaningfulText.substring(0, maxLength.coerceAtMost(meaningfulText.length)).lastIndexOf(' ')
-            meaningfulText = if (trimPosition > 0 && trimPosition > maxLength - 50) {
-                meaningfulText.substring(0, trimPosition).trim() + "..."
+        if (maxLength != null && meaningfulText.length > maxLength) {
+            val safeLength = maxLength.coerceAtLeast(0).coerceAtMost(meaningfulText.length)
+            val trimPosition = meaningfulText.substring(0, safeLength).lastIndexOf(' ')
+            meaningfulText = if (trimPosition > 0 && trimPosition > safeLength - 50) {
+                meaningfulText.substring(0, trimPosition).trim()
             } else {
-                meaningfulText.substring(0, maxLength.coerceAtMost(meaningfulText.length)).trim() + "..."
+                meaningfulText.substring(0, safeLength).trim()
             }
         }
     }

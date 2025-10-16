@@ -3,6 +3,7 @@ package com.example.paradigmaapp.android.data
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.example.paradigmaapp.model.Episode
+import com.example.paradigmaapp.model.stableListKey
 import com.example.paradigmaapp.repository.Repository
 import java.io.IOException
 
@@ -20,7 +21,12 @@ class EpisodePagingSource(
     private val programaId: String
 ) : PagingSource<Int, Episode>() {
 
+    private val seenEpisodeKeys = mutableSetOf<String>()
+
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Episode> {
+        if (params is LoadParams.Refresh) {
+            seenEpisodeKeys.clear()
+        }
         val offset = params.key ?: 0
         val tamanoDePagina = params.loadSize
 
@@ -31,11 +37,29 @@ class EpisodePagingSource(
                     LoadResult.Error(Exception(failure.toString())) // Convert Failure to Exception
                 },
                 { episodes ->
-                    val nextOffset = if (episodes.isEmpty()) null else offset + episodes.size
+                    val uniqueEpisodes = episodes.filter { episode ->
+                        val key = episode.stableListKey()
+                        if (seenEpisodeKeys.contains(key)) {
+                            false
+                        } else {
+                            seenEpisodeKeys.add(key)
+                            true
+                        }
+                    }
+
+                    if (uniqueEpisodes.isEmpty()) {
+                        return@fold LoadResult.Page(
+                            data = emptyList(),
+                            prevKey = if (offset == 0) null else (offset - tamanoDePagina).coerceAtLeast(0),
+                            nextKey = null
+                        )
+                    }
+
+                    val nextOffset = if (episodes.size < tamanoDePagina) null else offset + episodes.size
                     val prevKey = if (offset == 0) null else (offset - tamanoDePagina).coerceAtLeast(0)
 
                     LoadResult.Page(
-                        data = episodes,
+                        data = uniqueEpisodes,
                         prevKey = prevKey,
                         nextKey = nextOffset
                     )

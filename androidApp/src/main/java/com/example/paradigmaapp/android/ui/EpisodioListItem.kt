@@ -1,6 +1,8 @@
 package com.example.paradigmaapp.android.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,6 +71,7 @@ fun EpisodeListItem(
     onDeleteDownload: (Episode) -> Unit,
     isDownloaded: Boolean,
     isInQueue: Boolean,
+    isParentScrolling: Boolean,
     modifier: Modifier = Modifier
 ) {
     // Estado para controlar la visibilidad del menú de opciones.
@@ -123,12 +126,24 @@ fun EpisodeListItem(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                val marqueeModifier = if (isParentScrolling) {
+                    Modifier
+                } else {
+                    Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        animationMode = MarqueeAnimationMode.Immediately,
+                        delayMillis = 2000
+                    )
+                }
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(marqueeModifier)
                 )
                 if (episode.duration > 0) {
                     Text(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -14,11 +15,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.paradigmaapp.android.ui.EpisodeListItem
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.viewmodel.DownloadedEpisodeViewModel
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.android.viewmodel.NotificationType
 import com.example.paradigmaapp.android.viewmodel.QueueViewModel
 import com.example.paradigmaapp.model.Episode
+import com.example.paradigmaapp.model.stableListKey
 
 /**
  * Muestra la cola de reproducción actual del usuario, permitiéndole ver y gestionar
@@ -70,8 +73,13 @@ fun QueueScreen(
                 }
             } else {
                 // Lista de Episodes en la cola.
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp)) {
-                    items(queueEpisodes, key = { it.id }) { episode ->
+                val listState = rememberLazyListState()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = LayoutConstants.bottomContentPadding)
+                ) {
+                    items(queueEpisodes, key = { it.stableListKey() }) { episode ->
                         val isLoading = episode.id == preparingEpisodeId
                         EpisodeListItem(
                             episode = episode,
@@ -92,6 +100,7 @@ fun QueueScreen(
                             onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = true, // Todos en esta lista están en la cola
+                            isParentScrolling = listState.isScrollInProgress,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }

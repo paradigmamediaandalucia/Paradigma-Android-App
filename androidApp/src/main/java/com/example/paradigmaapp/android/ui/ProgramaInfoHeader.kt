@@ -3,10 +3,12 @@ package com.example.paradigmaapp.android.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,18 +39,34 @@ import com.example.paradigmaapp.model.Programa
  * @author Mario Alguacil Juárez
  */
 @Composable
-fun ProgramaInfoHeader(programa: Programa?) {
+fun ProgramaInfoHeader(programa: Programa?, modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (programa == null) {
             Box(Modifier.height(280.dp), Alignment.Center) { CircularProgressIndicator() }
         } else {
+            val configuration = LocalConfiguration.current
+            val screenWidth = configuration.screenWidthDp.dp
+            val availableWidth = (screenWidth - 32.dp).coerceAtLeast(0.dp)
+            val targetWidth = if (availableWidth == 0.dp) {
+                232.dp
+            } else {
+                (availableWidth * 0.64f).coerceIn(174.dp, 275.dp)
+            }
             AsyncImage(
-                model = programa.imageUrl,
+                model = programa.imageUrl ?: programa.imageOriginalUrl,
                 contentDescription = "Portada de ${programa.title.unescapeHtmlEntities()}",
-                modifier = Modifier.size(180.dp).shadow(6.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier
+                    .shadow(6.dp, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .widthIn(max = targetWidth)
+                    .sizeIn(minWidth = 174.dp, minHeight = 174.dp, maxWidth = targetWidth, maxHeight = targetWidth)
+                    .aspectRatio(1f),
                 contentScale = ContentScale.Crop,
                 error = painterResource(R.mipmap.logo_foreground),
                 placeholder = painterResource(R.mipmap.logo_foreground)
@@ -62,7 +81,7 @@ fun ProgramaInfoHeader(programa: Programa?) {
             Spacer(Modifier.height(8.dp))
             programa.description?.takeIf { it.isNotBlank() }?.let { desc ->
                 Text(
-                    text = desc.extractMeaningfulDescription(),
+                    text = desc.extractMeaningfulDescription(maxLength = null),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,12 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.paradigmaapp.android.ui.EpisodeListItem
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.viewmodel.DownloadedEpisodeViewModel
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.android.viewmodel.NotificationType
 import com.example.paradigmaapp.android.viewmodel.OnGoingEpisodeViewModel
 import com.example.paradigmaapp.android.viewmodel.QueueViewModel
 import com.example.paradigmaapp.model.Episode
+import com.example.paradigmaapp.model.stableListKey
 
 /**
  * Muestra la lista de Episodes cuya reproducción está en curso, permitiendo
@@ -98,11 +101,13 @@ fun OnGoingEpisodeScreen(
                 }
             } else {
                 // Lista de Episodes en progreso.
+                val listState = rememberLazyListState()
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp)
+                    state = listState,
+                    contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = LayoutConstants.bottomContentPadding)
                 ) {
-                    items(onGoingEpisodes, key = { it.id }) { episode ->
+                    items(onGoingEpisodes, key = { it.stableListKey() }) { episode ->
                         val isLoading = episode.id == preparingEpisodeId
                         EpisodeListItem(
                             episode = episode,
@@ -123,6 +128,7 @@ fun OnGoingEpisodeScreen(
                             onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = queueEpisodeIds.contains(episode.id),
+                            isParentScrolling = listState.isScrollInProgress,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }
