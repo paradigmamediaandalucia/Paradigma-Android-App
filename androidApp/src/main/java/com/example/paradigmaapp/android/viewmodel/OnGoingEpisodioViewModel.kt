@@ -43,11 +43,10 @@ class OnGoingEpisodeViewModel(
             val episodePositions = appPreferences.getAllEpisodePositions()
             val EpisodesEnCurso = mutableListOf<Episode>()
 
-            for ((idStr, position) in episodePositions) {
+            for ((episodeId, position) in episodePositions) {
                 if (position > 0) {
-                    // El ID del Episode ahora es String, no Int.
-                    appPreferences.loadEpisodeDetails(idStr)?.let { Episode ->
-                        EpisodesEnCurso.add(Episode)
+                    appPreferences.loadEpisodeDetails(episodeId)?.let { episode ->
+                        EpisodesEnCurso.add(episode)
                     }
                 }
             }

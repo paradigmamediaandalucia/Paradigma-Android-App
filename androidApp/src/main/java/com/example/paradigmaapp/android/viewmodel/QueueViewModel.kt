@@ -113,7 +113,7 @@ class QueueViewModel(
     fun addEpisodeToQueue(episode: Episode) {
         viewModelScope.launch(Dispatchers.IO) { // Operaciones de lista y guardado en IO
             if (!_queueEpisodeIds.value.contains(episode.id)) {
-                val newIds = _queueEpisodeIds.value + episode.id
+                val newIds = _queueEpisodeIds.value.toMutableList().apply { add(episode.id) }
                 _queueEpisodeIds.value = newIds
                 saveQueueState() // Guardar la nueva lista de IDs.
 
@@ -137,7 +137,7 @@ class QueueViewModel(
     fun removeEpisodeFromQueue(episode: Episode) {
         viewModelScope.launch(Dispatchers.IO) { // Operaciones de lista y guardado en IO
             if (_queueEpisodeIds.value.contains(episode.id)) {
-                _queueEpisodeIds.value = _queueEpisodeIds.value - episode.id
+                _queueEpisodeIds.value = _queueEpisodeIds.value.toMutableList().apply { remove(episode.id) }
                 saveQueueState() // Guardar la nueva lista de IDs.
 
                 // Actualizar la lista de objetos Episode.

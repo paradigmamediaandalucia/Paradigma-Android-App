@@ -125,7 +125,7 @@ fun FullScreenPlayerScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = episode.embedded?.terms?.firstOrNull()?.firstOrNull()?.title?.unescapeHtmlEntities() ?: "Paradigma Media",
+                        text = episode.description.unescapeHtmlEntities(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary
                     )

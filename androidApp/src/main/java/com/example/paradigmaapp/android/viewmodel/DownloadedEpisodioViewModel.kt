@@ -69,10 +69,6 @@ class DownloadedEpisodeViewModel(
      * @param onResult Callback que se invoca con el resultado de la operación (éxito o fallo).
      */
     fun downloadEpisode(episode: Episode, onResult: (Result<Unit>) -> Unit) {
-        if (episode.audioUrl == null) {
-            onResult(Result.failure(IOException("El Episode no tiene URL de descarga.")))
-            return
-        }
         if (isEpisodeDownloaded(episode.id)) {
             onResult(Result.failure(IllegalStateException("El Episode ya está descargado.")))
             return
@@ -91,7 +87,8 @@ class DownloadedEpisodeViewModel(
             try {
                 downloadsInProgress.add(episode.id)
 
-                val url = URL(episode.audioUrl)
+                val sourceUrl = episode.downloadUrl?.takeIf { it.isNotBlank() } ?: episode.audioUrl
+                val url = URL(sourceUrl)
                 val connection = url.openConnection() as HttpURLConnection
                 connection.connect()
 
@@ -172,7 +169,7 @@ class DownloadedEpisodeViewModel(
      * @return Un [String] con el nombre del archivo (ej: "123_nombre-del-slug.mp3").
      */
     private fun createFileName(episode: Episode): String {
-        val sanitizedSlug = episode.slug.replace(Regex("[^a-zA-Z0-9.-]"), "_")
-        return "${episode.id}_$sanitizedSlug.mp3"
+        val sanitizedId = episode.id.replace(Regex("[^a-zA-Z0-9.-]"), "_")
+        return "${sanitizedId}.mp3"
     }
 }

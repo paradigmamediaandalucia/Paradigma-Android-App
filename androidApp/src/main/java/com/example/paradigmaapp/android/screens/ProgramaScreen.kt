@@ -117,20 +117,20 @@ fun ProgramaScreen(
                     count = lazyPagingItems.itemCount,
                     key = lazyPagingItems.itemKey { it.id }
                 ) { index ->
-                    val Episode = lazyPagingItems[index]
-                    if (Episode != null) {
+                    val episode = lazyPagingItems[index]
+                    if (episode != null) {
                         // Determina si este ítem debe mostrar el indicador de carga.
-                        val isLoading = Episode.id == preparingEpisodeId
+                        val isLoading = episode.id == preparingEpisodeId
 
                         EpisodeListItem(
-                            Episode = Episode,
+                            episode = episode,
                             isLoading = isLoading, // Se pasa el estado de carga
                             onPlayEpisode = { mainViewModel.selectEpisode(it) },
                             onEpisodeLongClick = onEpisodeLongClicked,
                             onAddToQueue = { queueViewModel.addEpisodeToQueue(it) },
                             onRemoveFromQueue = { queueViewModel.removeEpisodeFromQueue(it) },
-                            onDownloadEpisode = { Episode ->
-                                downloadedViewModel.downloadEpisode(Episode) { result ->
+                            onDownloadEpisode = { episode ->
+                                downloadedViewModel.downloadEpisode(episode) { result ->
                                     result.onSuccess {
                                         mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
                                     }.onFailure {
@@ -139,8 +139,8 @@ fun ProgramaScreen(
                                 }
                             },
                             onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
-                            isDownloaded = downloadedEpisodes.any { it.id == Episode.id },
-                            isInQueue = queueEpisodeIds.contains(Episode.id),
+                            isDownloaded = downloadedEpisodes.any { it.id == episode.id },
+                            isInQueue = queueEpisodeIds.contains(episode.id),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }

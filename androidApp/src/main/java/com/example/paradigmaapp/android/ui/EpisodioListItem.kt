@@ -59,7 +59,7 @@ import com.example.paradigmaapp.model.Episode
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EpisodeListItem(
-    Episode: Episode,
+    episode: Episode,
     isLoading: Boolean,
     onPlayEpisode: (Episode) -> Unit,
     onEpisodeLongClick: (Episode) -> Unit,
@@ -79,8 +79,8 @@ fun EpisodeListItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = { onPlayEpisode(Episode) },
-                onLongClick = { onEpisodeLongClick(Episode) }
+                onClick = { onPlayEpisode(episode) },
+                onLongClick = { onEpisodeLongClick(episode) }
             ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -104,8 +104,8 @@ fun EpisodeListItem(
                 } else {
                     // Muestra la imagen del Episode si no está cargando.
                     AsyncImage(
-                        model = Episode.imageUrl,
-                        contentDescription = "Portada de ${Episode.title}",
+                        model = episode.imageUrl,
+                        contentDescription = "Portada de ${episode.title}",
                         modifier = Modifier
                             .size(72.dp)
                             .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)),
@@ -124,15 +124,15 @@ fun EpisodeListItem(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = Episode.title,
+                    text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (Episode.duration > 0) {
+                if (episode.duration > 0) {
                     Text(
-                        text = formatTime(Episode.duration),
+                        text = formatTime(episode.duration.toLong()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 1
@@ -149,7 +149,7 @@ fun EpisodeListItem(
                 IconButton(onClick = { showContextMenu = true }) {
                     Icon(
                         Icons.Filled.MoreVert,
-                        contentDescription = "Opciones para ${Episode.title}",
+                        contentDescription = "Opciones para ${episode.title}",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -158,15 +158,15 @@ fun EpisodeListItem(
                     onDismissRequest = { showContextMenu = false }
                 ) {
                     if (isDownloaded) {
-                        DropdownMenuItem(text = { Text("Eliminar descarga") }, onClick = { onDeleteDownload(Episode); showContextMenu = false })
+                        DropdownMenuItem(text = { Text("Eliminar descarga") }, onClick = { onDeleteDownload(episode); showContextMenu = false })
                     } else {
-                        DropdownMenuItem(text = { Text("Descargar") }, onClick = { onDownloadEpisode(Episode) ; showContextMenu = false })
+                        DropdownMenuItem(text = { Text("Descargar") }, onClick = { onDownloadEpisode(episode) ; showContextMenu = false })
                     }
 
                     if (isInQueue) {
-                        DropdownMenuItem(text = { Text("Eliminar de cola") }, onClick = { onRemoveFromQueue(Episode); showContextMenu = false })
+                        DropdownMenuItem(text = { Text("Eliminar de cola") }, onClick = { onRemoveFromQueue(episode); showContextMenu = false })
                     } else {
-                        DropdownMenuItem(text = { Text("Añadir a cola") }, onClick = { onAddToQueue(Episode); showContextMenu = false })
+                        DropdownMenuItem(text = { Text("Añadir a cola") }, onClick = { onAddToQueue(episode); showContextMenu = false })
                     }
                 }
             }

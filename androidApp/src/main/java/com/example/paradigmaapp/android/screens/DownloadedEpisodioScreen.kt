@@ -99,17 +99,17 @@ fun DownloadedEpisodeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp)
                 ) {
-                    items(downloadedEpisodes, key = { it.id }) { Episode ->
-                        val isLoading = Episode.id == preparingEpisodeId
+                    items(downloadedEpisodes, key = { it.id }) { episode ->
+                        val isLoading = episode.id == preparingEpisodeId
                         EpisodeListItem(
-                            Episode = Episode,
+                            episode = episode,
                             isLoading = isLoading, // <-- Pasando el estado de carga
                             onPlayEpisode = { onEpisodeSelected(it) },
                             onEpisodeLongClick = { onEpisodeLongClicked(it) },
                             onAddToQueue = { queueViewModel.addEpisodeToQueue(it) },
                             onRemoveFromQueue = { queueViewModel.removeEpisodeFromQueue(it) },
-                            onDownloadEpisode = { Episode ->
-                                downloadedEpisodeViewModel.downloadEpisode(Episode) { result ->
+                            onDownloadEpisode = { episode ->
+                                downloadedEpisodeViewModel.downloadEpisode(episode) { result ->
                                     result.onSuccess {
                                         mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
                                     }.onFailure {
@@ -119,7 +119,7 @@ fun DownloadedEpisodeScreen(
                             },
                             onDeleteDownload = { downloadedEpisodeViewModel.deleteDownloadedEpisode(it) },
                             isDownloaded = true, // Todos en esta lista están descargados
-                            isInQueue = queueEpisodeIds.contains(Episode.id),
+                            isInQueue = queueEpisodeIds.contains(episode.id),
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }

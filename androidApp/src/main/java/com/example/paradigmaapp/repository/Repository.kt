@@ -8,6 +8,7 @@ import com.example.paradigmaapp.model.Programa
 interface Repository {
     suspend fun getProgramas(): Either<Failure, List<Programa>>
     suspend fun getProgramaDetail(programId: String): Either<Failure, Programa>
+    suspend fun getEpisodes(programId: String, offset: Int, limit: Int): Either<Failure, List<Episode>>
     suspend fun getEpisodeDetail(episodeId: String): Either<Failure, Episode>
     suspend fun saveEpisode(episode: Episode)
     suspend fun getSavedEpisodes(): Either<Failure, List<Episode>>

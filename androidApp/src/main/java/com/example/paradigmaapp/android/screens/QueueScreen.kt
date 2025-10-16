@@ -71,17 +71,17 @@ fun QueueScreen(
             } else {
                 // Lista de Episodes en la cola.
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp)) {
-                    items(queueEpisodes, key = { it.id }) { Episode ->
-                        val isLoading = Episode.id == preparingEpisodeId
+                    items(queueEpisodes, key = { it.id }) { episode ->
+                        val isLoading = episode.id == preparingEpisodeId
                         EpisodeListItem(
-                            Episode = Episode,
+                            episode = episode,
                             isLoading = isLoading,
                             onPlayEpisode = { onEpisodeSelected(it) },
                             onEpisodeLongClick = { onEpisodeLongClicked(it) },
                             onAddToQueue = { /* No se puede añadir desde la propia cola */ },
                             onRemoveFromQueue = { queueViewModel.removeEpisodeFromQueue(it) },
-                            onDownloadEpisode = { Episode ->
-                                downloadedViewModel.downloadEpisode(Episode) { result ->
+                            onDownloadEpisode = { episode ->
+                                downloadedViewModel.downloadEpisode(episode) { result ->
                                     result.onSuccess {
                                         mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
                                     }.onFailure {
@@ -90,7 +90,7 @@ fun QueueScreen(
                                 }
                             },
                             onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
-                            isDownloaded = downloadedEpisodes.any { it.id == Episode.id },
+                            isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = true, // Todos en esta lista están en la cola
                             modifier = Modifier.padding(vertical = 4.dp)
                         )

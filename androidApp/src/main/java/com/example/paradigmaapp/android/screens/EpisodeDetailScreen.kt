@@ -65,7 +65,6 @@ import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.android.viewmodel.NotificationType
 import com.example.paradigmaapp.android.viewmodel.QueueViewModel
 import com.example.paradigmaapp.android.ui.formatTime
-import com.example.paradigmaapp.model.Embedded
 import com.example.paradigmaapp.model.Episode
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -130,16 +129,16 @@ fun EpisodeDetailScreen(
                     )
                 }
                 EpisodeState != null -> {
-                    val Episode = EpisodeState!!
-                    val isDownloaded = downloadedEpisodes.any { it.id == Episode.id }
-                    val isInQueue = queueEpisodeIds.contains(Episode.id)
+                    val episode = EpisodeState!!
+                    val isDownloaded = downloadedEpisodes.any { it.id == episode.id }
+                    val isInQueue = queueEpisodeIds.contains(episode.id)
 
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
 
                         AsyncImage(
-                            model = Episode.imageUrl,
-                            contentDescription = "Portada de ${Episode.title.unescapeHtmlEntities()}",
+                            model = episode.imageUrl,
+                            contentDescription = "Portada de ${episode.title.unescapeHtmlEntities()}",
                             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(
                                 RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
                             ),
@@ -153,7 +152,7 @@ fun EpisodeDetailScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = Episode.title.unescapeHtmlEntities(),
+                                text = episode.title.unescapeHtmlEntities(),
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
@@ -165,9 +164,9 @@ fun EpisodeDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                MetaDataItem(Icons.Default.DateRange, formatarFechaIso(Episode.date))
-                                if (Episode.duration > 0) { // Duration is Long, check if greater than 0
-                                    MetaDataItem(Icons.Default.Timer, formatTime(Episode.duration))
+                                MetaDataItem(Icons.Default.DateRange, formatarFechaIso(episode.date))
+                                if (episode.duration > 0) { // Duration is Long, check if greater than 0
+                                    MetaDataItem(Icons.Default.Timer, formatTime(episode.duration))
                                 }
                             }
                             if (programasAsociados.isNotEmpty()) {
@@ -186,18 +185,18 @@ fun EpisodeDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilledTonalIconButton(onClick = { mainViewModel.selectEpisode(Episode, true) }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.PlayArrow, "Reproducir Episode") }
+                                FilledTonalIconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.PlayArrow, "Reproducir Episode") }
                                 val queueIcon = if (isInQueue) Icons.Filled.RemoveCircleOutline else Icons.Filled.PlaylistAdd
                                 val queueAction = if (isInQueue) "Quitar de cola" else "Añadir a cola"
-                                OutlinedIconButton(onClick = { if (isInQueue) queueViewModel.removeEpisodeFromQueue(Episode) else queueViewModel.addEpisodeToQueue(Episode) }, modifier = Modifier.size(48.dp), border = ButtonDefaults.outlinedButtonBorder) { Icon(queueIcon, queueAction) }
+                                OutlinedIconButton(onClick = { if (isInQueue) queueViewModel.removeEpisodeFromQueue(episode) else queueViewModel.addEpisodeToQueue(episode) }, modifier = Modifier.size(48.dp), border = ButtonDefaults.outlinedButtonBorder) { Icon(queueIcon, queueAction) }
                                 val downloadIcon = if (isDownloaded) Icons.Filled.DeleteOutline else Icons.Filled.Download
                                 val downloadAction = if (isDownloaded) "Borrar Descarga" else "Descargar Episode"
                                 OutlinedIconButton(
                                     onClick = {
                                         if (isDownloaded) {
-                                            downloadedViewModel.deleteDownloadedEpisode(Episode)
+                                            downloadedViewModel.deleteDownloadedEpisode(episode)
                                         } else {
-                                            downloadedViewModel.downloadEpisode(Episode) { result ->
+                                            downloadedViewModel.downloadEpisode(episode) { result ->
                                                 result.onSuccess {
                                                     mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
                                                 }.onFailure {
@@ -213,10 +212,9 @@ fun EpisodeDetailScreen(
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            val displayDescription = Episode.content?.extractMeaningfulDescription()?.takeIf { it.isNotBlank() }
-                                ?: Episode.excerpt?.extractMeaningfulDescription()?.takeIf { it.isNotBlank() }
+                            val displayDescription = episode.description.extractMeaningfulDescription()
 
-                            if (!displayDescription.isNullOrBlank()) {
+                            if (displayDescription.isNotBlank()) {
                                 Text(text = "Descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.onBackground)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(text = displayDescription, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -251,17 +249,24 @@ fun EpisodeDetailScreen(
  * @return Una cadena con la fecha formateada (ej: "17 de junio de 2025") o "Fecha desconocida".
  */
 private fun formatarFechaIso(isoDate: String?): String {
-    if (isoDate == null) return "Fecha desconocida"
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT)
-        inputFormat.timeZone = TimeZone.getTimeZone("GMT")
-        val date = inputFormat.parse(isoDate)
-        val outputFormat = SimpleDateFormat("dd 'de' MMMM 'de' yyyy", Locale("es", "ES"))
-        outputFormat.timeZone = TimeZone.getDefault()
-        date?.let { outputFormat.format(it) } ?: "Fecha inválida"
-    } catch (e: Exception) {
-        "Fecha no procesable"
+    if (isoDate.isNullOrBlank()) return "Fecha desconocida"
+    val patterns = listOf("yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss")
+    val outputFormat = SimpleDateFormat("dd 'de' MMMM 'de' yyyy", Locale("es", "ES"))
+    outputFormat.timeZone = TimeZone.getDefault()
+
+    for (pattern in patterns) {
+        try {
+            val inputFormat = SimpleDateFormat(pattern, Locale.ROOT)
+            inputFormat.timeZone = TimeZone.getTimeZone("GMT")
+            val date = inputFormat.parse(isoDate)
+            if (date != null) {
+                return outputFormat.format(date)
+            }
+        } catch (_: Exception) {
+            // Try next pattern
+        }
     }
+    return "Fecha no procesable"
 }
 
 /**

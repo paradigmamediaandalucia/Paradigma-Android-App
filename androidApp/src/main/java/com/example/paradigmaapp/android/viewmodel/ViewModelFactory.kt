@@ -59,7 +59,9 @@ class ViewModelFactory(
                 ProgramaViewModel(repository, savedStateHandle) as T
             }
             modelClass.isAssignableFrom(EpisodeDetailViewModel::class.java) -> {
-                EpisodeDetailViewModel(repository, savedStateHandle) as T
+                val episodeId = savedStateHandle.get<String>("episodeId")
+                    ?: throw IllegalArgumentException("Missing episodeId for EpisodeDetailViewModel")
+                EpisodeDetailViewModel(episodeId, repository) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(repository) as T

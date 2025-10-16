@@ -4,4 +4,5 @@ plugins {
     alias(libs.plugins.kotlinAndroid).apply(false)       // Define el plugin de Kotlin para Android
     alias(libs.plugins.kotlinMultiplatform).apply(false) // Define el plugin de Kotlin Multiplatform
     alias(libs.plugins.compose.compiler).apply(false)  // Define el plugin del compilador de Compose
+    alias(libs.plugins.ksp).apply(false)
 }

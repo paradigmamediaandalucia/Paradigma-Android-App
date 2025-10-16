@@ -213,7 +213,7 @@ class AppPreferences(context: Context) {
         } catch (e: SerializationException) {
             mutableMapOf()
         }
-        detailsMap[Episode.id.toString()] = jsonParser.encodeToString(Episode)
+        detailsMap[Episode.id] = jsonParser.encodeToString(Episode)
         val newDetailsJson = jsonParser.encodeToString(detailsMap)
         prefs.edit().putString(PREF_EPISODE_DETAILS_MAP, newDetailsJson).apply()
     }

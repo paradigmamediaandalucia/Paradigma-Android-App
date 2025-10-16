@@ -1,9 +1,11 @@
 package com.example.paradigmaapp.android.api
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.paradigmaapp.android.audio.MediaAttribution
 import com.example.paradigmaapp.api.ktorClient
 import com.example.paradigmaapp.model.RadioInfo
 import io.ktor.client.call.body
@@ -32,6 +34,9 @@ class AndainaStream(
     private val apiUrl: String     // URL dinámica para los metadatos
 ) {
 
+    private val playbackContext =
+        ContextCompat.createAttributionContext(context, MediaAttribution.AUDIO_PLAYBACK_TAG)
+
     private var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer? get() = _exoPlayer
 
@@ -39,7 +44,7 @@ class AndainaStream(
 
     init {
         // Inicializa el reproductor de Media3 (ExoPlayer).
-        _exoPlayer = ExoPlayer.Builder(context).build()
+    _exoPlayer = ExoPlayer.Builder(playbackContext).build()
     }
 
     /** Inicia o reanuda la reproducción del stream. */

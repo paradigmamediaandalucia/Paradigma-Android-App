@@ -3,12 +3,20 @@ plugins {
     alias(libs.plugins.kotlinAndroid)      // Plugin de Kotlin para Android
     alias(libs.plugins.kotlinSerialization) // kotlinx.serialization, si se usa directamente aquí
     alias(libs.plugins.compose.compiler)   // Compilador de Jetpack Compose
-    id("com.google.devtools.ksp") version "2.0.0-1.0.21"
+    alias(libs.plugins.ksp)                // Usa el alias del plugin KSP definido en libs.versions.toml
 }
 
 android {
     namespace = "com.example.paradigmaapp.android" // Namespace de la aplicación
     compileSdk = 35 // SDK de compilación
+
+    // Este bloque es necesario para que KSP funcione correctamente con Room.
+    // Le indica a Kotlin dónde encontrar el código generado por KSP.
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("build/generated/ksp/main/kotlin")
+        }
+    }
 
     defaultConfig {
         applicationId = "org.paradigmamedia.paradigmaapp" // ID único de la app

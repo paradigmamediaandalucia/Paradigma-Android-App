@@ -21,31 +21,23 @@ class EpisodePagingSource(
 ) : PagingSource<Int, Episode>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Episode> {
-        val paginaActual = params.key ?: 1
-        // Guardamos el tamaño de página solicitado para la comparación.
+        val offset = params.key ?: 0
         val tamanoDePagina = params.loadSize
 
         return try {
-            val result = repository.getProgramaDetail(programaId)
+            val result = repository.getEpisodes(programaId, offset, tamanoDePagina)
             result.fold(
                 { failure ->
                     LoadResult.Error(Exception(failure.toString())) // Convert Failure to Exception
                 },
-                { programa ->
-                    val episodes = programa.episodes.drop((paginaActual - 1) * tamanoDePagina).take(tamanoDePagina)
-
-                    // Si el número de Episodes recibidos es menor que el que pedimos,
-                    // significa que esta es la última página. En ese caso, nextKey es null.
-                    val siguientePagina = if (episodes.size < tamanoDePagina) {
-                        null
-                    } else {
-                        paginaActual + 1
-                    }
+                { episodes ->
+                    val nextOffset = if (episodes.isEmpty()) null else offset + episodes.size
+                    val prevKey = if (offset == 0) null else (offset - tamanoDePagina).coerceAtLeast(0)
 
                     LoadResult.Page(
                         data = episodes,
-                        prevKey = if (paginaActual == 1) null else paginaActual - 1,
-                        nextKey = siguientePagina
+                        prevKey = prevKey,
+                        nextKey = nextOffset
                     )
                 }
             )
@@ -58,8 +50,9 @@ class EpisodePagingSource(
 
     override fun getRefreshKey(state: PagingState<Int, Episode>): Int? {
         return state.anchorPosition?.let { anchorPosition ->
-            state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
-                ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
-        }
+            val closestPage = state.closestPageToPosition(anchorPosition)
+            closestPage?.prevKey?.let { it + closestPage.data.size }
+                ?: closestPage?.nextKey?.let { it - closestPage.data.size }
+        }?.coerceAtLeast(0)
     }
 }

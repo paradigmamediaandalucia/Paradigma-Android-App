@@ -2,59 +2,50 @@ package com.example.paradigmaapp.cache.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.paradigmaapp.model.Embedded
 import com.example.paradigmaapp.model.Episode
 
 @Entity(tableName = "episodes")
 data class EpisodeEntity(
     @PrimaryKey
-    val id: String,
+    val episodeId: String,
     val title: String,
     val description: String,
-    val audioUrl: String,
+    val downloadUrl: String,
     val imageUrl: String,
-    val duration: Long,
-    val date: String,
-    val programId: String,
-    val slug: String,
-    val content: String?,
-    val excerpt: String?,
-    val embedded: Embedded?,
-    val programaIds: List<String>?
+    val duration: Int,
+    val publishedAt: String,
+    val showId: String,
 )
 
 fun EpisodeEntity.toEpisode(): Episode {
     return Episode(
-        id = id,
+        id = episodeId,
         title = title,
         description = description,
-        audioUrl = audioUrl,
-        imageUrl = imageUrl,
-        duration = duration,
-        date = date,
-        programId = programId,
-        slug = slug,
-        content = content,
-        excerpt = excerpt,
-        embedded = embedded,
-        programaIds = programaIds
+        audioUrl = downloadUrl,
+        downloadUrl = downloadUrl,
+        imageUrl = imageUrl.takeIf { it.isNotBlank() },
+        imageOriginalUrl = imageUrl.takeIf { it.isNotBlank() },
+        duration = duration.toLong(),
+        date = publishedAt,
+        programId = showId,
+        slug = "",
+        content = null,
+        excerpt = null,
+        embedded = null,
+        programaIds = null
     )
 }
 
 fun Episode.toEpisodeEntity(): EpisodeEntity {
     return EpisodeEntity(
-        id = id,
+        episodeId = id,
         title = title,
         description = description,
-        audioUrl = audioUrl,
-        imageUrl = imageUrl,
-        duration = duration,
-        date = date,
-        programId = programId,
-        slug = slug,
-        content = content,
-        excerpt = excerpt,
-        embedded = embedded,
-        programaIds = programaIds
+        downloadUrl = downloadUrl ?: audioUrl,
+    imageUrl = imageUrl ?: imageOriginalUrl ?: "",
+        duration = duration.toInt(),
+        publishedAt = date ?: "",
+        showId = programId
     )
 }

@@ -1,7 +1,7 @@
 package com.example.paradigmaapp.cache
 
+import androidx.room.Embedded
 import androidx.room.TypeConverter
-import com.example.paradigmaapp.model.Embedded
 import com.example.paradigmaapp.model.Episode
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

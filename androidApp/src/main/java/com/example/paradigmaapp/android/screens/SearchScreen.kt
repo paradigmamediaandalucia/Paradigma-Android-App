@@ -106,17 +106,17 @@ fun SearchScreen(
                 // Estado: resultados encontrados
                 searchResults.isNotEmpty() -> {
                     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp)) {
-                        items(searchResults, key = { it.id }) { Episode ->
-                            val isLoading = Episode.id == preparingEpisodeId
+                        items(searchResults, key = { it.id }) { episode ->
+                            val isLoading = episode.id == preparingEpisodeId
                             EpisodeListItem(
-                                Episode = Episode,
+                                episode = episode,
                                 isLoading = isLoading, // <-- Pasando el estado de carga
                                 onPlayEpisode = { onEpisodeSelected(it) },
                                 onEpisodeLongClick = { onEpisodeLongClicked(it) },
                                 onAddToQueue = { queueViewModel.addEpisodeToQueue(it) },
                                 onRemoveFromQueue = { queueViewModel.removeEpisodeFromQueue(it) },
-                                onDownloadEpisode = { Episode ->
-                                    downloadedViewModel.downloadEpisode(Episode) { result ->
+                                onDownloadEpisode = { episode ->
+                                    downloadedViewModel.downloadEpisode(episode) { result ->
                                         result.onSuccess {
                                             mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
                                         }.onFailure {
@@ -125,8 +125,8 @@ fun SearchScreen(
                                     }
                                 },
                                 onDeleteDownload = { downloadedViewModel.deleteDownloadedEpisode(it) },
-                                isDownloaded = downloadedEpisodes.any { it.id == Episode.id },
-                                isInQueue = queueEpisodeIds.contains(Episode.id),
+                                isDownloaded = downloadedEpisodes.any { it.id == episode.id },
+                                isInQueue = queueEpisodeIds.contains(episode.id),
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }

@@ -1,6 +1,7 @@
 package com.example.paradigmaapp.android.viewmodel
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
@@ -8,6 +9,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.paradigmaapp.android.audio.MediaAttribution
 import com.example.paradigmaapp.android.api.AndainaStream
 import com.example.paradigmaapp.android.data.AppPreferences
 import com.example.paradigmaapp.exception.Failure
@@ -58,6 +60,10 @@ class MainViewModel(
     val andainaStreamPlayer: AndainaStream,
     val volumeControlViewModel: VolumeControlViewModel
 ) : ViewModel() {
+    private companion object {
+        private const val CONTEXT_EPISODE_LIMIT = 20
+    }
+
     private val _programas = MutableStateFlow<List<Programa>>(emptyList())
     val programas: StateFlow<List<Programa>> = _programas.asStateFlow()
 
@@ -117,7 +123,9 @@ class MainViewModel(
 
     private val _contextualPlaylist = MutableStateFlow<List<Episode>>(emptyList())
 
-    val podcastExoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val playbackContext =
+        ContextCompat.createAttributionContext(context, MediaAttribution.AUDIO_PLAYBACK_TAG)
+    val podcastExoPlayer: ExoPlayer = ExoPlayer.Builder(playbackContext).build()
 
     private var progressUpdateJob: Job? = null
     private var radioInfoUpdateJob: Job? = null
@@ -317,12 +325,16 @@ class MainViewModel(
     /** Prepara el [podcastExoPlayer] para un Episode específico. */
     private fun prepareEpisodePlayer(episode: Episode, positionMs: Long, playWhenReady: Boolean) {
         val mediaPath =
-            downloadedViewModel.getDownloadedFilePathByEpisodeId(episode.id) ?: episode.audioUrl
-        if (mediaPath == null) {
-            _initialDataError.value =
-                "No se puede reproducir '${episode.title}'. Falta URL del archivo."
+            downloadedViewModel.getDownloadedFilePathByEpisodeId(episode.id)
+                ?: episode.audioUrl.takeIf { it.isNotBlank() }
+                ?: episode.downloadUrl
+                ?: ""
+        if (mediaPath.isBlank()) {
+            _initialDataError.value = "No se encontró una fuente de audio para '${episode.title}'."
+            _preparingEpisodeId.value = null
             return
         }
+
         try {
             podcastExoPlayer.stop()
             podcastExoPlayer.clearMediaItems()
@@ -331,6 +343,8 @@ class MainViewModel(
             podcastExoPlayer.playWhenReady = playWhenReady
         } catch (e: Exception) {
             _initialDataError.value = "Error al preparar la reproducción de '${episode.title}'."
+        } finally {
+            _preparingEpisodeId.value = null
         }
     }
 
@@ -434,10 +448,10 @@ class MainViewModel(
                         // El Episode es nuevo y no viene de la cola ni del contexto actual
                         // así que cargamos su contexto de programa.
                         episode.programId.let { programId ->
-                            repository.getProgramaDetail(programId).fold(
+                            repository.getEpisodes(programId, 0, CONTEXT_EPISODE_LIMIT).fold(
                                 { /* Handle error or use default */ },
-                                { programa ->
-                                    _contextualPlaylist.value = programa.episodes
+                                { episodes ->
+                                    _contextualPlaylist.value = episodes
                                 }
                             )
                         }
@@ -477,23 +491,23 @@ class MainViewModel(
             }
             _isPodcastPlaying.value = isPlaying
             if (!isPlaying && podcastExoPlayer.playbackState != Player.STATE_ENDED && podcastExoPlayer.playbackState != Player.STATE_IDLE) {
-                _currentPlayingEpisode.value?.let { Episode ->
+                _currentPlayingEpisode.value?.let { episode ->
                     appPreferences.saveEpisodePosition(
-                        Episode.id,
+                        episode.id,
                         podcastExoPlayer.currentPosition
                     )
-                    onGoingViewModel.addOrUpdateOnGoingEpisode(Episode)
+                    onGoingViewModel.addOrUpdateOnGoingEpisode(episode)
                 }
             }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) {
-                _currentPlayingEpisode.value?.let {
-                    appPreferences.saveEpisodePosition(it.id, 0L)
+                _currentPlayingEpisode.value?.let { episode ->
+                    appPreferences.saveEpisodePosition(episode.id, 0L)
                     onGoingViewModel.refrescarListaEpisodesEnCurso()
                     viewModelScope.launch {
-                        val nextEpisode = queueViewModel.dequeueNextEpisode(it.id)
+                        val nextEpisode = queueViewModel.dequeueNextEpisode(episode.id)
                         if (nextEpisode != null) selectEpisode(
                             nextEpisode,
                             true
@@ -526,9 +540,9 @@ class MainViewModel(
                     _podcastDuration.value = duration
                     _podcastProgress.value =
                         if (duration > 0) currentPos.toFloat() / duration.toFloat() else 0f
-                    _currentPlayingEpisode.value?.let {
+                    _currentPlayingEpisode.value?.let { episode ->
                         onGoingViewModel.addOrUpdateOnGoingEpisode(
-                            it
+                            episode
                         )
                     }
                 }
@@ -560,10 +574,10 @@ class MainViewModel(
      */
     override fun onCleared() {
         super.onCleared()
-        _currentPlayingEpisode.value?.let { Episode ->
+        _currentPlayingEpisode.value?.let { episode ->
             if (podcastExoPlayer.playbackState != Player.STATE_IDLE) {
-                appPreferences.saveEpisodePosition(Episode.id, podcastExoPlayer.currentPosition)
-                appPreferences.saveEpisodeDetails(Episode)
+                appPreferences.saveEpisodePosition(episode.id, podcastExoPlayer.currentPosition)
+                appPreferences.saveEpisodeDetails(episode)
             }
         }
         podcastExoPlayer.removeListener(podcastPlayerListener)
