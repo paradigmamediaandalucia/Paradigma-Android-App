@@ -9,4 +9,7 @@ import androidx.compose.ui.unit.dp
 object LayoutConstants {
     /** Extra bottom room so scrolling content stays visible above the mini player. */
     val bottomContentPadding: Dp = 220.dp
+
+    /** Clearance so content does not collide with floating top controls. */
+    val topActionPadding: Dp = 24.dp
 }

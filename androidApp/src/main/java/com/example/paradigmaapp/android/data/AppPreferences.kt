@@ -38,6 +38,9 @@ class AppPreferences(context: Context) {
         private const val PREF_EPISODE_DETAILS_MAP = "episodeDetailsMap_v1"
         private const val PREF_ONBOARDING_COMPLETE = "onboardingComplete_v1"
         private const val PREF_MANUALLY_SET_DARK_THEME = "manuallySetDarkTheme_v1"
+        private const val PREF_REMEMBER_EPISODE_PROGRESS = "rememberEpisodeProgress_v1"
+        private const val PREF_AUTO_PLAY_NEXT_EPISODE = "autoPlayNextEpisode_v1"
+        private const val PREF_PROGRAM_DISPLAY_MODE = "programDisplayMode_v1" // "grid" o "list"
 
         private const val PREF_VOLUME_LEVEL = "volumeLevel_v1"
         private const val DEFAULT_VOLUME_LEVEL = 0.5f
@@ -48,6 +51,16 @@ class AppPreferences(context: Context) {
      */
     fun saveOnboardingComplete(isComplete: Boolean) {
         prefs.edit().putBoolean(PREF_ONBOARDING_COMPLETE, isComplete).apply()
+    }
+
+    /** Guarda el modo de visualización de programas ("grid" o "list"). */
+    fun saveProgramDisplayMode(isList: Boolean) {
+        prefs.edit().putString(PREF_PROGRAM_DISPLAY_MODE, if (isList) "list" else "grid").apply()
+    }
+
+    /** Carga el modo de visualización de programas. */
+    fun loadProgramDisplayMode(): Boolean {
+        return prefs.getString(PREF_PROGRAM_DISPLAY_MODE, "grid") == "list"
     }
 
     /**
@@ -107,6 +120,11 @@ class AppPreferences(context: Context) {
         }
     }
 
+    /** Elimina todas las posiciones de reproducción guardadas. */
+    fun clearEpisodePositions() {
+        prefs.edit().remove(PREF_EPISODE_POSITIONS).apply()
+    }
+
     /** Guarda el ID del Episode actualmente activo.
      *
      * @param episodeId El ID del Episode o `null` si no se encuentra.
@@ -145,6 +163,26 @@ class AppPreferences(context: Context) {
         return prefs.getBoolean(PREF_IS_STREAM_ACTIVE, true)
     }
 
+    /** Guarda si debe recordarse el progreso de los Episodes. */
+    fun saveRememberEpisodeProgress(remember: Boolean) {
+        prefs.edit().putBoolean(PREF_REMEMBER_EPISODE_PROGRESS, remember).apply()
+    }
+
+    /** Indica si se debe recordar el progreso de los Episodes. */
+    fun loadRememberEpisodeProgress(): Boolean {
+        return prefs.getBoolean(PREF_REMEMBER_EPISODE_PROGRESS, true)
+    }
+
+    /** Guarda si se debe reproducir automáticamente el siguiente Episode. */
+    fun saveAutoPlayNextEpisode(autoPlay: Boolean) {
+        prefs.edit().putBoolean(PREF_AUTO_PLAY_NEXT_EPISODE, autoPlay).apply()
+    }
+
+    /** Indica si debe reproducirse automáticamente el siguiente Episode al finalizar el actual. */
+    fun loadAutoPlayNextEpisode(): Boolean {
+        return prefs.getBoolean(PREF_AUTO_PLAY_NEXT_EPISODE, true)
+    }
+
     /** Guarda la cola de reproducción (lista de IDs).
      *
      * @param queueEpisodeIds Una lista de Strings que representan los IDs de los Episodes en la cola.
@@ -169,6 +207,11 @@ class AppPreferences(context: Context) {
         } else {
             emptyList()
         }
+    }
+
+    /** Elimina por completo la cola de reproducción almacenada. */
+    fun clearEpisodeQueue() {
+        prefs.edit().remove(PREF_EPISODE_QUEUE_IDS).apply()
     }
 
     /** Guarda la lista completa de objetos Episode que han sido descargados.
@@ -197,6 +240,11 @@ class AppPreferences(context: Context) {
         } else {
             emptyList()
         }
+    }
+
+    /** Borra el registro de Episodes descargados. */
+    fun clearDownloadedEpisodes() {
+        prefs.edit().remove(PREF_DOWNLOADED_EpisodeS).apply()
     }
 
     /** Guarda los detalles completos de un Episode en un mapa persistido.
@@ -240,6 +288,18 @@ class AppPreferences(context: Context) {
         } else {
             null
         }
+    }
+
+    /** Limpia los detalles de Episodes almacenados en caché. */
+    fun clearEpisodeDetails() {
+        prefs.edit().remove(PREF_EPISODE_DETAILS_MAP).apply()
+    }
+
+    /** Elimina posiciones, detalles y el Episode actual guardado. */
+    fun clearEpisodeProgressData() {
+        clearEpisodePositions()
+        clearEpisodeDetails()
+        saveCurrentEpisodeId(null)
     }
 
     /** Guarda la preferencia manual del usuario para el tema.

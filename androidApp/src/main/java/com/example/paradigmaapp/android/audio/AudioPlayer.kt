@@ -26,16 +26,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.viewmodel.VolumeControlViewModel
 import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.model.RadioInfo
+import android.graphics.Bitmap
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Composable que representa la interfaz de usuario del reproductor de audio compacto global de la aplicación.
@@ -79,6 +83,7 @@ fun AudioPlayer(
     var dragPosition by remember { mutableFloatStateOf(episodeProgress) }
 
     val currentVolume by volumeControlViewModel.volume.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(currentVolume, activePlayer) {
         activePlayer?.volume = currentVolume
@@ -91,7 +96,8 @@ fun AudioPlayer(
     }
 
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val isStreamAvailable = isAndainaStreamActive || isAndainaPlaying
+    val streamingIconTint = if (isStreamAvailable) Color(0xFF8E8E93) else Color(0xFFD64545)
 
     val isEffectivelyLiveStream = currentEpisode == null
 
@@ -136,7 +142,12 @@ fun AudioPlayer(
                         .padding(vertical = 4.dp)
                 ) {
                     AsyncImage(
-                        model = displayImageUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(displayImageUrl)
+                            .crossfade(true)
+                            .allowHardware(false)
+                            .bitmapConfig(Bitmap.Config.ARGB_8888)
+                            .build(),
                         contentDescription = "Portada de la emisión actual",
                         modifier = Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)),
                         contentScale = ContentScale.Crop,
@@ -154,7 +165,14 @@ fun AudioPlayer(
                 Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onPlayPauseClick) { Icon(painterResource(if (isPlayingGeneral) R.mipmap.pause else R.mipmap.play), if (isPlayingGeneral) "Pausar" else "Reproducir", Modifier.size(36.dp), tint = onPrimaryColor) }
                     IconButton(onClick = onVolumeIconClick) { Icon(painterResource(R.mipmap.volume), "Control de Volumen", Modifier.size(30.dp), tint = onPrimaryColor) }
-                    IconButton(onClick = onPlayStreamingClick) { Icon(painterResource(R.mipmap.streaming), "Radio en Directo", Modifier.size(30.dp), tint = if (isAndainaStreamActive) secondaryColor else onPrimaryColor) }
+                    IconButton(onClick = onPlayStreamingClick) {
+                        Icon(
+                            painter = painterResource(R.mipmap.streaming),
+                            contentDescription = "Radio en Directo",
+                            modifier = Modifier.size(30.dp),
+                            tint = streamingIconTint
+                        )
+                    }
                 }
             }
 

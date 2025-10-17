@@ -1,5 +1,6 @@
 package com.example.paradigmaapp.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -16,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -32,12 +32,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.ui.formatTime
+import com.example.paradigmaapp.android.utils.dpToPreferredSquarePx
+import com.example.paradigmaapp.android.utils.rememberCoilImageRequest
+import com.example.paradigmaapp.android.utils.selectSpreakerImageSource
 import com.example.paradigmaapp.model.Episode
 
 /**
@@ -86,8 +90,9 @@ fun EpisodeListItem(
                 onLongClick = { onEpisodeLongClick(episode) }
             ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -99,24 +104,29 @@ fun EpisodeListItem(
                 contentAlignment = Alignment.Center
             ) {
                 if (isLoading) {
-                    // Muestra un spinner si el Episode se está cargando.
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    // Muestra la imagen del Episode si no está cargando.
-                    AsyncImage(
-                        model = episode.imageUrl,
-                        contentDescription = "Portada de ${episode.title}",
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)),
-                        contentScale = ContentScale.Crop,
-                        error = painterResource(R.mipmap.logo_foreground),
-                        placeholder = painterResource(R.mipmap.logo_foreground)
-                    )
+                    // Intentionally no visual indicator; keeps parameter in use while avoiding yellow spinner.
                 }
+                val density = LocalDensity.current.density
+                val targetPx = remember(density) { dpToPreferredSquarePx(72f, density) }
+                val imageSource = remember(episode.imageUrl, episode.imageOriginalUrl, targetPx) {
+                    selectSpreakerImageSource(episode.imageUrl, episode.imageOriginalUrl, targetPx)
+                }
+                val imageRequest = rememberCoilImageRequest(
+                    primaryData = imageSource.preferred,
+                    fallbackData = imageSource.fallback,
+                    debugLabel = "episode:${episode.id}"
+                )
+
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = "Portada de ${episode.title}",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.mipmap.logo_foreground),
+                    placeholder = painterResource(R.mipmap.logo_foreground)
+                )
             }
 
             // Columna con el título y la duración del Episode.
@@ -138,7 +148,7 @@ fun EpisodeListItem(
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
@@ -149,7 +159,7 @@ fun EpisodeListItem(
                     Text(
                         text = formatTime(episode.duration.toLong()),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         maxLines = 1
                     )
                 }

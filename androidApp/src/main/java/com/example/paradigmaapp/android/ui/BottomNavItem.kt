@@ -37,6 +37,4 @@ sealed class BottomNavItem(
     data object Downloads : BottomNavItem(Screen.Downloads.route, "Descargas", Icons.Default.Download)
     /** Representa la pantalla de la Cola de reproducción. */
     data object Queue : BottomNavItem(Screen.Queue.route, "Cola", Icons.AutoMirrored.Filled.List)
-    /** Representa la pantalla de Ajustes. */
-    data object Settings : BottomNavItem(Screen.Settings.route, "Ajustes", Icons.Default.Settings)
 }

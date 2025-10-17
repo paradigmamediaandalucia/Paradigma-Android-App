@@ -508,10 +508,11 @@ class MainViewModel(
                     onGoingViewModel.refrescarListaEpisodesEnCurso()
                     viewModelScope.launch {
                         val nextEpisode = queueViewModel.dequeueNextEpisode(episode.id)
-                        if (nextEpisode != null) selectEpisode(
-                            nextEpisode,
-                            true
-                        ) else _currentPlayingEpisode.value = null
+                        if (appPreferences.loadAutoPlayNextEpisode() && nextEpisode != null) {
+                            selectEpisode(nextEpisode, true)
+                        } else {
+                            _currentPlayingEpisode.value = null
+                        }
                     }
                 }
             }

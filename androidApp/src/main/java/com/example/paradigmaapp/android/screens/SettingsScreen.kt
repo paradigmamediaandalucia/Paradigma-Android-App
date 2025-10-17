@@ -1,17 +1,20 @@
 package com.example.paradigmaapp.android.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
@@ -23,23 +26,23 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.ui.HelpItem
 import com.example.paradigmaapp.android.ui.ListDivider
 import com.example.paradigmaapp.android.ui.SettingItemRow
@@ -57,36 +60,52 @@ import com.example.paradigmaapp.android.viewmodel.SettingsViewModel
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onClearQueue: () -> Unit,
+    onClearDownloads: () -> Unit,
+    onClearListeningHistory: () -> Unit,
+    appVersionName: String
 ) {
     val uriHandler = LocalUriHandler.current
     val isStreamActive by settingsViewModel.isStreamActive.collectAsState()
     val isManuallySetToDarkTheme by settingsViewModel.isManuallySetToDarkTheme.collectAsState()
+    val rememberEpisodeProgress by settingsViewModel.rememberEpisodeProgress.collectAsState()
+    val autoPlayNextEpisode by settingsViewModel.autoPlayNextEpisode.collectAsState()
     val websiteUrl = settingsViewModel.mainWebsiteUrl
+    val isProgramListMode by settingsViewModel.isProgramListMode.collectAsState()
+
+    BackHandler(onBack = onBackClick)
+
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val topContentPadding = statusBarPadding + LayoutConstants.topActionPadding
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Ajustes y Ayuda") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 24.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = topContentPadding + 16.dp,
+                    bottom = 24.dp
+                ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Sección de Preferencias
             Text(text = "Preferencias", style = MaterialTheme.typography.titleLarge)
+            SettingItemRow(
+                title = "Mostrar programas en lista",
+                description = "Alterna entre vista de cuadrícula y lista para los programas."
+            ) {
+                Switch(
+                    checked = isProgramListMode,
+                    onCheckedChange = { settingsViewModel.toggleProgramDisplayMode() }
+                )
+            }
             SettingItemRow(
                 title = "Abrir con Radio en Directo",
                 description = "Iniciar la app con el stream de Andaina FM activo."
@@ -94,6 +113,24 @@ fun SettingsScreen(
                 Switch(
                     checked = isStreamActive,
                     onCheckedChange = { settingsViewModel.toggleStreamActive() }
+                )
+            }
+            SettingItemRow(
+                title = "Recordar progreso de escucha",
+                description = "Guarda en qué punto dejaste cada episodio para retomarlo más tarde."
+            ) {
+                Switch(
+                    checked = rememberEpisodeProgress,
+                    onCheckedChange = { settingsViewModel.toggleRememberEpisodeProgress() }
+                )
+            }
+            SettingItemRow(
+                title = "Reproducir siguiente episodio automáticamente",
+                description = "Al finalizar un episodio, comienza el siguiente disponible sin intervención."
+            ) {
+                Switch(
+                    checked = autoPlayNextEpisode,
+                    onCheckedChange = { settingsViewModel.toggleAutoPlayNextEpisode() }
                 )
             }
             ListDivider()
@@ -176,12 +213,52 @@ fun SettingsScreen(
             ListDivider()
 
 
+            Text(text = "Gestión de datos", style = MaterialTheme.typography.titleLarge)
+            val dataActionButtonColors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFFD54F),
+                contentColor = Color.Black
+            )
+            SettingItemRow(
+                title = "Vaciar cola de reproducción",
+                description = "Elimina todos los Episodes pendientes en la cola."
+            ) {
+                Button(onClick = onClearQueue, colors = dataActionButtonColors) {
+                    Text("Vaciar")
+                }
+            }
+            SettingItemRow(
+                title = "Eliminar descargas",
+                description = "Borra por completo los Episodes guardados en el dispositivo."
+            ) {
+                Button(
+                    onClick = onClearDownloads,
+                    colors = dataActionButtonColors
+                ) {
+                    Text("Eliminar")
+                }
+            }
+            SettingItemRow(
+                title = "Limpiar historial de escucha",
+                description = "Reinicia la lista de Episodes en curso y sus progresos."
+            ) {
+                Button(onClick = onClearListeningHistory, colors = dataActionButtonColors) {
+                    Text("Limpiar")
+                }
+            }
+            ListDivider()
+
+
             // Sección de Más Información
             Text(text = "Más Información", style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = "Versión de la aplicación: $appVersionName",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Button(
                 onClick = { uriHandler.openUri(websiteUrl) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                colors = dataActionButtonColors
             ) {
                 Text("Visitar web de Paradigma Media")
             }

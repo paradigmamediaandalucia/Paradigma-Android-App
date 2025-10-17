@@ -7,11 +7,9 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.filter
 import com.example.paradigmaapp.android.data.EpisodePagingSource
 import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.model.Programa
-import com.example.paradigmaapp.model.stableListKey
 import com.example.paradigmaapp.repository.Repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +35,10 @@ class ProgramaViewModel(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    companion object {
+        private const val EPISODE_PAGE_SIZE = 20
+    }
+
     // --- ARGUMENTOS DE NAVEGACIÓN ---
     /** El ID del programa actual, obtenido de los argumentos de navegación. */
     val programaId: String = savedStateHandle.get<String>("programaId") ?: ""
@@ -57,20 +59,15 @@ class ProgramaViewModel(
     val EpisodesPaginados: Flow<PagingData<Episode>> = Pager(
         // Configuración de cómo se deben cargar las páginas.
         config = PagingConfig(
-            pageSize = 20, // El número de elementos a cargar en cada página.
+            pageSize = EPISODE_PAGE_SIZE,
+            initialLoadSize = EPISODE_PAGE_SIZE,
+            prefetchDistance = EPISODE_PAGE_SIZE,
             enablePlaceholders = false
         ),
         // Le decimos a Paging que use nuestro EpisodePagingSource para obtener los datos.
         pagingSourceFactory = { EpisodePagingSource(repository, programaId) }
     )
         .flow
-        .map { pagingData ->
-            val seenEpisodeKeys = mutableSetOf<String>()
-            pagingData.filter { episode ->
-                val key = episode.stableListKey()
-                seenEpisodeKeys.add(key)
-            }
-        }
         // Cachea los resultados en el ViewModelScope para que los datos sobrevivan a cambios
         // de configuración como la rotación de la pantalla, evitando recargas innecesarias.
         .cachedIn(viewModelScope)

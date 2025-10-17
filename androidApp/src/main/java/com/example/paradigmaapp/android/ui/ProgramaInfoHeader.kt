@@ -14,12 +14,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +29,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.utils.extractMeaningfulDescription
+import com.example.paradigmaapp.android.utils.dpToPreferredSquarePx
+import com.example.paradigmaapp.android.utils.rememberCoilImageRequest
+import com.example.paradigmaapp.android.utils.selectSpreakerImageSource
 import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.model.Programa
 
@@ -58,11 +63,22 @@ fun ProgramaInfoHeader(programa: Programa?, modifier: Modifier = Modifier) {
             } else {
                 (availableWidth * 0.64f).coerceIn(174.dp, 275.dp)
             }
+            val density = LocalDensity.current.density
+            val targetPx = remember(targetWidth, density) { dpToPreferredSquarePx(targetWidth.value, density) }
+            val imageSource = remember(programa.imageUrl, programa.imageOriginalUrl, targetPx) {
+                selectSpreakerImageSource(programa.imageUrl, programa.imageOriginalUrl, targetPx)
+            }
+            val headerImageRequest = rememberCoilImageRequest(
+                primaryData = imageSource.preferred,
+                fallbackData = imageSource.fallback,
+                debugLabel = "program-header:${programa.id}"
+            )
+
             AsyncImage(
-                model = programa.imageUrl ?: programa.imageOriginalUrl,
+                model = headerImageRequest,
                 contentDescription = "Portada de ${programa.title.unescapeHtmlEntities()}",
                 modifier = Modifier
-                    .shadow(6.dp, RoundedCornerShape(12.dp))
+                    .shadow(2.dp, RoundedCornerShape(12.dp), clip = false)
                     .clip(RoundedCornerShape(12.dp))
                     .widthIn(max = targetWidth)
                     .sizeIn(minWidth = 174.dp, minHeight = 174.dp, maxWidth = targetWidth, maxHeight = targetWidth)

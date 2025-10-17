@@ -137,6 +137,31 @@ class DownloadedEpisodeViewModel(
         }
     }
 
+    /** Elimina todas las descargas almacenadas y limpia el estado asociado. */
+    fun clearAllDownloads(onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val episodesToRemove = _downloadedEpisodes.value
+                episodesToRemove.forEach { episode ->
+                    val file = File(applicationContext.filesDir, createFileName(episode))
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                }
+                appPreferences.clearDownloadedEpisodes()
+                downloadsInProgress.clear()
+                withContext(Dispatchers.Main) {
+                    _downloadedEpisodes.value = emptyList()
+                    onResult(Result.success(Unit))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(Result.failure(e))
+                }
+            }
+        }
+    }
+
     /**
      * Verifica si un Episode está actualmente en la lista de descargados.
      *

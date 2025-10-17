@@ -27,10 +27,6 @@ import java.util.Collections
 
 class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase: AppDatabase) : Repository {
 
-    companion object {
-        private const val DEFAULT_EPISODE_PAGE_SIZE = 20
-    }
-
     private val programaIdsCache = Collections.synchronizedSet(mutableSetOf<String>())
 
     private fun HttpRequestBuilder.addSpreakerAuth() {
@@ -112,6 +108,7 @@ class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase
 
     override suspend fun searchEpisodes(query: String): Either<Failure, List<Episode>> = try {
         ensureProgramaIdsCache()
+        val normalizedQuery = normalizeForSearch(query)
 
         val response = httpClient.get("${Config.SPREAKER_API_BASE_URL}search") {
             parameter("q", query)
@@ -119,17 +116,78 @@ class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase
             parameter("user_id", Config.SPREAKER_USER_ID)
         }.body<EpisodeResponse>()
         val allowedIds = synchronized(programaIdsCache) { programaIdsCache.toSet() }
-        val filteredEpisodes = if (allowedIds.isEmpty()) {
-            emptyList()
-        } else {
-            response.response.items.filter { episode ->
-                val programId = episode.programId.ifBlank { episode.show?.id ?: "" }
-                allowedIds.contains(programId)
-            }
+
+        val apiEpisodes = response.response.items.filter { episode ->
+            val programId = episode.programId.ifBlank { episode.show?.id ?: "" }
+            allowedIds.isEmpty() || allowedIds.contains(programId)
         }
-        Right(filteredEpisodes)
+
+        val rankedApiEpisodes = apiEpisodes.sortedByDescending { episodeSearchScore(normalizedQuery, it) }
+        val topScore = rankedApiEpisodes.firstOrNull()?.let { episodeSearchScore(normalizedQuery, it) } ?: 0.0
+
+        val needFallback = normalizedQuery.isNotEmpty() && (rankedApiEpisodes.isEmpty() || topScore < TOP_RESULT_MIN_SCORE)
+        val similarityFallback = if (needFallback) {
+            findEpisodesBySimilarity(normalizedQuery, allowedIds)
+        } else {
+            emptyList()
+        }
+
+        val combined = (rankedApiEpisodes + similarityFallback)
+            .distinctBy { it.id }
+            .sortedByDescending { episodeSearchScore(normalizedQuery, it) }
+            .take(MAX_SEARCH_RESULTS)
+
+        Right(combined)
     } catch (e: Exception) {
         handleException(e)
+    }
+
+    private suspend fun findEpisodesBySimilarity(
+        normalizedQuery: String,
+        allowedIds: Set<String>
+    ): List<Episode> {
+        val storedProgramas = appDatabase.programaDao().getAllProgramas().first().map { it.toPrograma() }
+        if (storedProgramas.isEmpty()) return emptyList()
+
+        val candidatePrograms = storedProgramas
+            .map { programa -> programa to searchSimilarityScore(normalizedQuery, programa.title) }
+            .filter { (_, score) -> score >= PROGRAM_NAME_SCORE_THRESHOLD }
+            .sortedByDescending { it.second }
+            .take(MAX_PROGRAM_CANDIDATES)
+
+        if (candidatePrograms.isEmpty()) return emptyList()
+
+        val fallbackEpisodes = mutableListOf<Episode>()
+        for ((programa, _) in candidatePrograms) {
+            when (val episodesResult = getEpisodes(programa.id, 0, DEFAULT_EPISODE_PAGE_SIZE)) {
+                is Left -> Unit
+                is Right -> {
+                    val episodes = episodesResult.b.filter { episode ->
+                        val programId = episode.programId.ifBlank { episode.show?.id ?: "" }
+                        allowedIds.isEmpty() || allowedIds.contains(programId)
+                    }
+                    fallbackEpisodes += episodes
+                }
+            }
+        }
+
+        return fallbackEpisodes
+    }
+
+    private fun episodeSearchScore(normalizedQuery: String, episode: Episode): Double {
+        if (normalizedQuery.isEmpty()) return 0.0
+        val titleScore = searchSimilarityScore(normalizedQuery, episode.title)
+        val showTitleScore = episode.show?.let { searchSimilarityScore(normalizedQuery, it.title) } ?: 0.0
+        val descriptionScore = searchSimilarityScore(normalizedQuery, episode.description)
+        return maxOf(titleScore, showTitleScore, descriptionScore)
+    }
+
+    companion object {
+        private const val DEFAULT_EPISODE_PAGE_SIZE = 20
+        private const val MAX_SEARCH_RESULTS = 60
+        private const val MAX_PROGRAM_CANDIDATES = 4
+        private const val PROGRAM_NAME_SCORE_THRESHOLD = 0.55
+        private const val TOP_RESULT_MIN_SCORE = 0.65
     }
 
     private fun handleException(e: Exception): Left<Failure> {

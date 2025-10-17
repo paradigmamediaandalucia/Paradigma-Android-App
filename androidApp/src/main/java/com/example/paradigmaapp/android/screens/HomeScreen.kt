@@ -5,8 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -23,6 +29,7 @@ import com.example.paradigmaapp.android.ui.ErrorView
 import com.example.paradigmaapp.android.ui.LayoutConstants
 import com.example.paradigmaapp.android.ui.ProgramaListItem
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
+import com.example.paradigmaapp.android.viewmodel.SettingsViewModel
 import com.example.paradigmaapp.model.Programa
 
 /**
@@ -30,6 +37,7 @@ import com.example.paradigmaapp.model.Programa
  * Gestiona los estados de carga, error y contenido vacío.
  *
  * @param mainViewModel El [MainViewModel] que proporciona la lista de programas y su estado de carga/error.
+ * @param settingsViewModel El [SettingsViewModel] que expone las preferencias de visualización.
  * @param onProgramaSelected Lambda que se invoca cuando el usuario selecciona un programa de la lista.
  * Recibe el ID y el nombre del programa seleccionado.
  *
@@ -38,6 +46,7 @@ import com.example.paradigmaapp.model.Programa
 @Composable
 fun HomeScreen(
     mainViewModel: MainViewModel,
+    settingsViewModel: SettingsViewModel,
     onProgramaSelected: (programaId: String, programaNombre: String) -> Unit
 ) {
     // Observa los estados del MainViewModel
@@ -45,12 +54,16 @@ fun HomeScreen(
     val isLoadingProgramas: Boolean by mainViewModel.isLoadingProgramas.collectAsState()
     val programasError: String? by mainViewModel.programasError.collectAsState()
 
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val topContentPadding = statusBarPadding + LayoutConstants.topActionPadding
+    val isProgramListMode by settingsViewModel.isProgramListMode.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding() // Aplica padding para la barra de estado al contenedor principal
     ) {
+        Spacer(modifier = Modifier.height(topContentPadding))
         when {
             // Estado de carga: Muestra un indicador de progreso si se están cargando y no hay programas aún.
             isLoadingProgramas && programas.isEmpty() -> {
@@ -76,29 +89,57 @@ fun HomeScreen(
                 )
             }
             // Estado de contenido vacío (sin error): Muestra un mensaje indicando que no hay programas.
-            programas.isEmpty() && !isLoadingProgramas -> {
+            programas.isEmpty() -> {
                 ErrorView(
                     message = "No hay programas disponibles en este momento.",
-                    errorType = ErrorType.NO_RESULTS, // Tipo específico para "sin resultados"
-                    onRetry = { mainViewModel.loadInitialProgramas() } // Opcional: permitir reintentar
+                    errorType = ErrorType.NO_RESULTS,
+                    onRetry = { mainViewModel.loadInitialProgramas() }
                 )
             }
-            // Estado con contenido: Muestra la cuadrícula de programas.
+            // Estado con contenido: Muestra la cuadrícula o lista de programas.
             else -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2), // Cuadrícula con dos columnas
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = LayoutConstants.bottomContentPadding + 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp), // Espacio vertical entre ítems
-                    horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio horizontal entre ítems
-                ) {
-                    items(items = programas, key = { programa -> programa.id }) { programa ->
-                        ProgramaListItem(
-                            programa = programa,
-                            onClicked = {
-                                onProgramaSelected(programa.id, programa.title)
-                            }
-                        )
+                if (isProgramListMode) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            top = 16.dp,
+                            end = 16.dp,
+                            bottom = LayoutConstants.bottomContentPadding + 16.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        lazyItems(programas, key = { programa -> programa.id }) { programa ->
+                            ProgramaListItem(
+                                programa = programa,
+                                onClicked = {
+                                    onProgramaSelected(programa.id, programa.title)
+                                },
+                                isListMode = true
+                            )
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2), // Cuadrícula con dos columnas
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            top = 16.dp,
+                            end = 16.dp,
+                            bottom = LayoutConstants.bottomContentPadding + 16.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp), // Espacio vertical entre ítems
+                        horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio horizontal entre ítems
+                    ) {
+                        items(items = programas, key = { programa -> programa.id }) { programa ->
+                            ProgramaListItem(
+                                programa = programa,
+                                onClicked = {
+                                    onProgramaSelected(programa.id, programa.title)
+                                }
+                            )
+                        }
                     }
                 }
             }

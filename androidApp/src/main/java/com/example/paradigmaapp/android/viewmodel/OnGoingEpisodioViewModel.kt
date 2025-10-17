@@ -73,4 +73,15 @@ class OnGoingEpisodeViewModel(
             refrescarListaEpisodesEnCurso() // Refresca la lista para reflejar cualquier cambio
         }
     }
+
+    /** Elimina el historial de escucha guardado. */
+    fun clearListeningHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            appPreferences.clearEpisodePositions()
+            appPreferences.clearEpisodeDetails()
+            withContext(Dispatchers.Main) {
+                _onGoingEpisodes.value = emptyList()
+            }
+        }
+    }
 }

@@ -35,9 +35,9 @@ fun BottomNavigationBar(
     val navItems = listOf(
         BottomNavItem.Search,
         BottomNavItem.OnGoing,
+        BottomNavItem.Home, // Home is always in the center
         BottomNavItem.Downloads,
-        BottomNavItem.Queue,
-        BottomNavItem.Settings
+        BottomNavItem.Queue
     )
 
     // Observamos la pila de navegación para saber cuál es la ruta activa.
@@ -51,44 +51,20 @@ fun BottomNavigationBar(
         tonalElevation = 0.dp
     ) {
         // Iteramos sobre cada uno de los items definidos.
-        navItems.forEach { item ->
-            // Comprobamos si la ruta del item actual en el bucle es la pantalla activa.
-            val isSelected = currentRoute == item.route
-
-            if (isSelected) {
-                // SI ES LA PANTALLA ACTIVA: Dibujamos el botón "Inicio" en su lugar.
-                NavigationBarItem(
-                    icon = { Icon(BottomNavItem.Home.icon, contentDescription = BottomNavItem.Home.title) },
-                    label = { Text(BottomNavItem.Home.title) },
-                    selected = false, // "Inicio" es una acción, no una selección.
-                    onClick = {
-                        // Navega a Inicio reseteando la pila de navegación.
-                        navController.navigate(BottomNavItem.Home.route) {
-                            popUpTo(navController.graph.findStartDestination().id)
-                            launchSingleTop = true
-                        }
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        navItems.forEachIndexed { index, item ->
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.title) },
+                label = { Text(item.title) },
+                selected = currentRoute == item.route,
+                onClick = {
+                    navigateToScreenIfDifferent(navController, item.route)
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = Color.Transparent
                 )
-            } else {
-                // SI NO ES LA PANTALLA ACTIVA: Dibujamos el botón normal del item.
-                NavigationBarItem(
-                    icon = { Icon(item.icon, contentDescription = item.title) },
-                    label = { Text(item.title) },
-                    selected = false, // En esta UI, ningún item se marca como seleccionado.
-                    onClick = {
-                        // Navegamos a la pantalla del item.
-                        navigateToScreenIfDifferent(navController, item.route)
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
+            )
         }
     }
 }

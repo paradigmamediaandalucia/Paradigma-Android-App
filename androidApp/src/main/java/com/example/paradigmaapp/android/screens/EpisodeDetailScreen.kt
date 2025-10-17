@@ -19,11 +19,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
@@ -31,35 +29,37 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalConfiguration
 import coil.compose.AsyncImage
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.ui.ErrorType
 import com.example.paradigmaapp.android.ui.ErrorView
 import com.example.paradigmaapp.android.ui.LayoutConstants
+import com.example.paradigmaapp.android.utils.dpToPreferredSquarePx
+import com.example.paradigmaapp.android.utils.rememberCoilImageRequest
+import com.example.paradigmaapp.android.utils.selectSpreakerImageSource
 import com.example.paradigmaapp.android.utils.extractMeaningfulDescription
 import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.android.viewmodel.DownloadedEpisodeViewModel
@@ -104,7 +104,7 @@ fun EpisodeDetailScreen(
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
 
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val halfStatusBarPadding = if (statusBarPadding > 0.dp) statusBarPadding * 0.5f else 0.dp
+    val topContentPadding = statusBarPadding + LayoutConstants.topActionPadding
 
     Scaffold(
         modifier = Modifier.fillMaxSize()
@@ -154,14 +154,25 @@ fun EpisodeDetailScreen(
                             (availableWidth * 0.64f).coerceIn(174.dp, 275.dp)
                         }
 
-                        Spacer(modifier = Modifier.height(halfStatusBarPadding))
+                        Spacer(modifier = Modifier.height(topContentPadding))
+                        val density = LocalDensity.current.density
+                        val detailTargetPx = remember(targetWidth, density) { dpToPreferredSquarePx(targetWidth.value, density) }
+                        val imageSource = remember(episode.imageUrl, episode.imageOriginalUrl, detailTargetPx) {
+                            selectSpreakerImageSource(episode.imageUrl, episode.imageOriginalUrl, detailTargetPx)
+                        }
+                        val headerImageRequest = rememberCoilImageRequest(
+                            primaryData = imageSource.preferred,
+                            fallbackData = imageSource.fallback,
+                            debugLabel = "episode-detail:${episode.id}"
+                        )
+
                         AsyncImage(
-                            model = episode.imageUrl ?: episode.imageOriginalUrl,
+                            model = headerImageRequest,
                             contentDescription = "Portada de ${episode.title.unescapeHtmlEntities()}",
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)
                                 .align(Alignment.CenterHorizontally)
-                                .shadow(6.dp, RoundedCornerShape(12.dp))
+                                .shadow(2.dp, RoundedCornerShape(12.dp), clip = false)
                                 .clip(RoundedCornerShape(12.dp))
                                 .widthIn(max = targetWidth)
                                 .sizeIn(
@@ -214,13 +225,19 @@ fun EpisodeDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilledTonalIconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.PlayArrow, "Reproducir Episode") }
+                                IconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) {
+                                    Icon(Icons.Filled.PlayArrow, "Reproducir Episode", tint = MaterialTheme.colorScheme.primary)
+                                }
                                 val queueIcon = if (isInQueue) Icons.Filled.RemoveCircleOutline else Icons.Filled.PlaylistAdd
                                 val queueAction = if (isInQueue) "Quitar de cola" else "Añadir a cola"
-                                OutlinedIconButton(onClick = { if (isInQueue) queueViewModel.removeEpisodeFromQueue(episode) else queueViewModel.addEpisodeToQueue(episode) }, modifier = Modifier.size(48.dp), border = ButtonDefaults.outlinedButtonBorder) { Icon(queueIcon, queueAction) }
+                                IconButton(onClick = {
+                                    if (isInQueue) queueViewModel.removeEpisodeFromQueue(episode) else queueViewModel.addEpisodeToQueue(episode)
+                                }, modifier = Modifier.size(48.dp)) {
+                                    Icon(queueIcon, queueAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 val downloadIcon = if (isDownloaded) Icons.Filled.DeleteOutline else Icons.Filled.Download
                                 val downloadAction = if (isDownloaded) "Borrar Descarga" else "Descargar Episode"
-                                OutlinedIconButton(
+                                IconButton(
                                     onClick = {
                                         if (isDownloaded) {
                                             downloadedViewModel.deleteDownloadedEpisode(episode)
@@ -234,9 +251,10 @@ fun EpisodeDetailScreen(
                                             }
                                         }
                                     },
-                                    modifier = Modifier.size(48.dp),
-                                    border = ButtonDefaults.outlinedButtonBorder
-                                ) { Icon(downloadIcon, downloadAction) }
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(downloadIcon, downloadAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(24.dp))
@@ -255,16 +273,6 @@ fun EpisodeDetailScreen(
                     ErrorView(message = "No se pudo cargar la información del Episode.", errorType = ErrorType.NO_RESULTS, onRetry = { episodeDetailViewModel.loadEpisodeDetails() }, modifier = Modifier.align(Alignment.Center))
                 }
             }
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(
-                        start = 8.dp,
-                        top = halfStatusBarPadding + 8.dp
-                    )
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), CircleShape)
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = MaterialTheme.colorScheme.onSurface) }
         }
     }
 }

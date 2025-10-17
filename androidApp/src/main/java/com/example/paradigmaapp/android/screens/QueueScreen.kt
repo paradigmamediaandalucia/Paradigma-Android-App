@@ -1,17 +1,15 @@
 package com.example.paradigmaapp.android.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.paradigmaapp.android.ui.EpisodeListItem
@@ -53,19 +51,21 @@ fun QueueScreen(
     // Controladores de UI y corutinas
     val snackbarHostState = remember { SnackbarHostState() }
 
+    BackHandler(onBack = onBackClick)
+
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val topContentPadding = statusBarPadding + LayoutConstants.topActionPadding
+
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Cola de Reproducción", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
         ) {
+            Spacer(modifier = Modifier.height(topContentPadding))
             if (queueEpisodes.isEmpty()) {
                 // Mensaje si la cola está vacía.
                 Box(Modifier.fillMaxSize().padding(16.dp), Alignment.Center) {

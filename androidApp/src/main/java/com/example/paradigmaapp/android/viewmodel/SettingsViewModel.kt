@@ -18,15 +18,23 @@ class SettingsViewModel(
     private val appPreferences: AppPreferences
 ) : ViewModel() {
 
+    // Estado para el modo de visualización de programas (grid/list)
+    private val _isProgramListMode = MutableStateFlow(appPreferences.loadProgramDisplayMode())
+    val isProgramListMode: StateFlow<Boolean> = _isProgramListMode.asStateFlow()
+
     // Inicializa el estado del stream. Si no hay una preferencia guardada,
     // se establece por defecto en 'false' (desactivado).
-    private val _isStreamActive = MutableStateFlow(
-        appPreferences.loadIsStreamActive() ?: false
-    )
+    private val _isStreamActive = MutableStateFlow(appPreferences.loadIsStreamActive())
     val isStreamActive: StateFlow<Boolean> = _isStreamActive.asStateFlow()
 
     private val _isManuallySetToDarkTheme = MutableStateFlow<Boolean?>(appPreferences.loadIsManuallySetDarkTheme())
     val isManuallySetToDarkTheme: StateFlow<Boolean?> = _isManuallySetToDarkTheme.asStateFlow()
+
+    private val _rememberEpisodeProgress = MutableStateFlow(appPreferences.loadRememberEpisodeProgress())
+    val rememberEpisodeProgress: StateFlow<Boolean> = _rememberEpisodeProgress.asStateFlow()
+
+    private val _autoPlayNextEpisode = MutableStateFlow(appPreferences.loadAutoPlayNextEpisode())
+    val autoPlayNextEpisode: StateFlow<Boolean> = _autoPlayNextEpisode.asStateFlow()
 
     /**
      * Expone la URL del sitio web obtenida del servicio de configuración.
@@ -50,5 +58,32 @@ class SettingsViewModel(
     fun setThemePreference(isDark: Boolean?) {
         appPreferences.saveIsManuallySetDarkTheme(isDark)
         _isManuallySetToDarkTheme.value = isDark
+    }
+
+    /** Alterna si se debe recordar el progreso de los Episodes. */
+    fun toggleRememberEpisodeProgress() {
+        val newState = !_rememberEpisodeProgress.value
+        _rememberEpisodeProgress.value = newState
+        appPreferences.saveRememberEpisodeProgress(newState)
+    }
+
+    /** Alterna la reproducción automática del siguiente Episode. */
+    fun toggleAutoPlayNextEpisode() {
+        val newState = !_autoPlayNextEpisode.value
+        _autoPlayNextEpisode.value = newState
+        appPreferences.saveAutoPlayNextEpisode(newState)
+    }
+
+    /** Alterna el modo de visualización de programas entre cuadrícula y lista. */
+    fun toggleProgramDisplayMode() {
+        val newState = !_isProgramListMode.value
+        appPreferences.saveProgramDisplayMode(newState)
+        _isProgramListMode.value = newState
+    }
+
+    /** Permite establecer explícitamente el modo de visualización de programas. */
+    fun setProgramDisplayMode(isList: Boolean) {
+        appPreferences.saveProgramDisplayMode(isList)
+        _isProgramListMode.value = isList
     }
 }

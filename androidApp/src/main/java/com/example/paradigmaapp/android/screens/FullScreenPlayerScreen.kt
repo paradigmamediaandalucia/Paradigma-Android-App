@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,11 +31,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +48,9 @@ import coil.compose.AsyncImage
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.audio.VolumeControl
 import com.example.paradigmaapp.android.ui.formatTime
+import com.example.paradigmaapp.android.utils.dpToPreferredSquarePx
+import com.example.paradigmaapp.android.utils.rememberCoilImageRequest
+import com.example.paradigmaapp.android.utils.selectSpreakerImageSource
 import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.android.viewmodel.VolumeControlViewModel
@@ -101,8 +106,23 @@ fun FullScreenPlayerScreen(
             verticalArrangement = Arrangement.SpaceAround
         ) {
             currentEpisode?.let { episode ->
+                val configuration = LocalConfiguration.current
+                val density = LocalDensity.current.density
+                val imageWidthDp = (configuration.screenWidthDp - 48).coerceAtLeast(160)
+                val targetPx = remember(configuration.screenWidthDp, density) {
+                    dpToPreferredSquarePx(imageWidthDp.toFloat(), density)
+                }
+                val imageSource = remember(episode.imageUrl, episode.imageOriginalUrl, targetPx) {
+                    selectSpreakerImageSource(episode.imageUrl, episode.imageOriginalUrl, targetPx)
+                }
+                val artworkRequest = rememberCoilImageRequest(
+                    primaryData = imageSource.preferred,
+                    fallbackData = imageSource.fallback,
+                    debugLabel = "player:${episode.id}"
+                )
+
                 AsyncImage(
-                    model = episode.imageUrl,
+                    model = artworkRequest,
                     contentDescription = "Portada de ${episode.title.unescapeHtmlEntities()}",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -167,21 +187,20 @@ fun FullScreenPlayerScreen(
                         Icon(
                             imageVector = Icons.Default.SkipPrevious,
                             contentDescription = "Episode Anterior",
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
                     IconButton(
                         onClick = { mainViewModel.onPlayerPlayPauseClick() },
-                        modifier = Modifier
-                            .size(72.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        modifier = Modifier.size(72.dp)
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "Pausar" else "Reproducir",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -193,7 +212,8 @@ fun FullScreenPlayerScreen(
                         Icon(
                             imageVector = Icons.Default.SkipNext,
                             contentDescription = "Siguiente Episode",
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }

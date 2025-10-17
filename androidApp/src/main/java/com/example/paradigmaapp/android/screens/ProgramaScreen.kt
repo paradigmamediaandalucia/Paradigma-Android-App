@@ -13,13 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -86,7 +81,7 @@ fun ProgramaScreen(
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
 
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val halfStatusBarPadding = (statusBarPadding / 2f).coerceAtLeast(0.dp)
+    val topContentPadding = statusBarPadding + LayoutConstants.topActionPadding
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -107,7 +102,7 @@ fun ProgramaScreen(
             ) {
                 // Cabecera con la información del programa.
                 item {
-                    Spacer(modifier = Modifier.height(halfStatusBarPadding))
+                    Spacer(modifier = Modifier.height(topContentPadding))
                     ProgramaInfoHeader(programa = programa, modifier = Modifier.padding(bottom = 24.dp))
 
                     if (programa != null) {
@@ -192,16 +187,6 @@ fun ProgramaScreen(
                 }
             }
 
-            // Botón para volver atrás.
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 8.dp, top = halfStatusBarPadding + 8.dp)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), CircleShape)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = MaterialTheme.colorScheme.onSurface)
-            }
         }
     }
 }
