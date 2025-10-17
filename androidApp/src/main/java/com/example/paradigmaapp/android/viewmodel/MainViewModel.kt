@@ -94,7 +94,7 @@ class MainViewModel(
     private val _podcastDuration = MutableStateFlow(0L)
     val podcastDuration: StateFlow<Long> = _podcastDuration.asStateFlow()
 
-    private val _isAndainaStreamActive = MutableStateFlow(appPreferences.loadIsStreamActive() ?: false)
+    private val _isAndainaStreamActive = MutableStateFlow(appPreferences.loadIsStreamActive())
     val isAndainaStreamActive: StateFlow<Boolean> = _isAndainaStreamActive.asStateFlow()
 
     private val _isAndainaPlaying = MutableStateFlow(false)
@@ -151,8 +151,20 @@ class MainViewModel(
 
     init {
         // Lógica de inicio de la aplicación para la radio
-        if (appPreferences.loadOnboardingComplete() && (appPreferences.loadIsStreamActive() == true)) {
-            andainaStreamPlayer.play()
+        val shouldAutoPlayStreamOnStart = appPreferences.loadAutoPlayStreamOnStart()
+        val hasExplicitAutoPlayPreference = appPreferences.hasAutoPlayStreamOnStartPreference()
+
+        // Migración: en instalaciones anteriores, desactivar la radio en ajustes implicaba pausa.
+        if (!hasExplicitAutoPlayPreference && !shouldAutoPlayStreamOnStart && !_isAndainaStreamActive.value) {
+            _isAndainaStreamActive.value = true
+            appPreferences.saveIsStreamActive(true)
+            appPreferences.saveAutoPlayStreamOnStart(false)
+        }
+
+        if (appPreferences.loadOnboardingComplete() && _isAndainaStreamActive.value) {
+            if (shouldAutoPlayStreamOnStart) {
+                andainaStreamPlayer.play()
+            }
         }
 
         // Ya no se usa _currentVolume en este ViewModel
@@ -218,7 +230,7 @@ class MainViewModel(
                         is Failure.NetworkConnection -> "Sin conexión a internet."
                         is Failure.ServerError -> "Error del servidor."
                         is Failure.CustomError -> failure.message
-                        else -> "No se pudieron cargar los últimos Episodes."
+                        else -> "No se pudieron cargar los últimos episodios."
                     }
                 },
                 { episodes ->
@@ -508,11 +520,10 @@ class MainViewModel(
                     onGoingViewModel.refrescarListaEpisodesEnCurso()
                     viewModelScope.launch {
                         val nextEpisode = queueViewModel.dequeueNextEpisode(episode.id)
-                        if (appPreferences.loadAutoPlayNextEpisode() && nextEpisode != null) {
-                            selectEpisode(nextEpisode, true)
-                        } else {
-                            _currentPlayingEpisode.value = null
-                        }
+                        if (nextEpisode != null) selectEpisode(
+                            nextEpisode,
+                            true
+                        ) else _currentPlayingEpisode.value = null
                     }
                 }
             }

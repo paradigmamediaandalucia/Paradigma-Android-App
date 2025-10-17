@@ -32,6 +32,7 @@ class AppPreferences(context: Context) {
         private const val PREFS_NAME = "ParadigmaAppPrefsV2"
         private const val PREF_CURRENT_EPISODE_ID = "currentEpisodeId_v2"
         private const val PREF_IS_STREAM_ACTIVE = "isStreamActive_v2"
+        private const val PREF_AUTO_PLAY_STREAM_ON_START = "autoPlayStreamOnStart_v1"
         private const val PREF_EPISODE_POSITIONS = "episodePositions_v2"
         private const val PREF_EPISODE_QUEUE_IDS = "episodeQueueIds_v2"
         private const val PREF_DOWNLOADED_EpisodeS = "downloadedEpisodes_v1"
@@ -40,7 +41,7 @@ class AppPreferences(context: Context) {
         private const val PREF_MANUALLY_SET_DARK_THEME = "manuallySetDarkTheme_v1"
         private const val PREF_REMEMBER_EPISODE_PROGRESS = "rememberEpisodeProgress_v1"
         private const val PREF_AUTO_PLAY_NEXT_EPISODE = "autoPlayNextEpisode_v1"
-        private const val PREF_PROGRAM_DISPLAY_MODE = "programDisplayMode_v1" // "grid" o "list"
+        private const val PREF_PROGRAM_DISPLAY_MODE = "programDisplayMode_v1"
 
         private const val PREF_VOLUME_LEVEL = "volumeLevel_v1"
         private const val DEFAULT_VOLUME_LEVEL = 0.5f
@@ -147,20 +148,37 @@ class AppPreferences(context: Context) {
         return prefs.getString(PREF_CURRENT_EPISODE_ID, null)
     }
 
-    /** Guarda la preferencia de si el streaming debe estar activo al iniciar.
-     *
-     * @param isActive `true` si el streaming debe estar activo al iniciar, `false` en caso contrario.
-     */
+    /** Guarda si el streaming está habilitado en la interfaz (botón de la antena). */
     fun saveIsStreamActive(isActive: Boolean) {
         prefs.edit().putBoolean(PREF_IS_STREAM_ACTIVE, isActive).apply()
     }
 
-    /** Carga la preferencia de si el streaming debe estar activo.
-     *
-     * @return `true` si el streaming debe estar activo al iniciar, `false` en caso contrario.
-     */
+    /** Indica si el streaming está habilitado en la interfaz (botón de la antena). */
     fun loadIsStreamActive(): Boolean {
         return prefs.getBoolean(PREF_IS_STREAM_ACTIVE, true)
+    }
+
+    /** Guarda si la app debe reproducir la radio automáticamente al iniciarse. */
+    fun saveAutoPlayStreamOnStart(shouldAutoPlay: Boolean) {
+        prefs.edit().putBoolean(PREF_AUTO_PLAY_STREAM_ON_START, shouldAutoPlay).apply()
+    }
+
+    /**
+     * Carga si la app debe reproducir la radio automáticamente al iniciarse.
+     * Si la preferencia aún no existe (usuarios anteriores), se reutiliza el valor histórico
+     * de `PREF_IS_STREAM_ACTIVE` para mantener el comportamiento esperado tras la migración.
+     */
+    fun loadAutoPlayStreamOnStart(): Boolean {
+        return if (prefs.contains(PREF_AUTO_PLAY_STREAM_ON_START)) {
+            prefs.getBoolean(PREF_AUTO_PLAY_STREAM_ON_START, true)
+        } else {
+            prefs.getBoolean(PREF_IS_STREAM_ACTIVE, true)
+        }
+    }
+
+    /** Indica si la preferencia específica de auto-reproducción ya fue establecida explícitamente. */
+    fun hasAutoPlayStreamOnStartPreference(): Boolean {
+        return prefs.contains(PREF_AUTO_PLAY_STREAM_ON_START)
     }
 
     /** Guarda si debe recordarse el progreso de los Episodes. */

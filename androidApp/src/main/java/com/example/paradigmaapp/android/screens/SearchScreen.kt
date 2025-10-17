@@ -66,6 +66,7 @@ fun SearchScreen(
     val isSearching by searchViewModel.isSearching.collectAsState()
     val searchError by searchViewModel.searchError.collectAsState()
     val downloadedEpisodes by downloadedViewModel.downloadedEpisodes.collectAsState()
+    val currentDownloadStatus by downloadedViewModel.currentDownloadStatus.collectAsState()
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
 
@@ -153,6 +154,7 @@ fun SearchScreen(
                                 isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                                 isInQueue = queueEpisodeIds.contains(episode.id),
                                 isParentScrolling = listState.isScrollInProgress,
+                                currentDownloadStatus = currentDownloadStatus,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }

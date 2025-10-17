@@ -22,10 +22,9 @@ class SettingsViewModel(
     private val _isProgramListMode = MutableStateFlow(appPreferences.loadProgramDisplayMode())
     val isProgramListMode: StateFlow<Boolean> = _isProgramListMode.asStateFlow()
 
-    // Inicializa el estado del stream. Si no hay una preferencia guardada,
-    // se establece por defecto en 'false' (desactivado).
-    private val _isStreamActive = MutableStateFlow(appPreferences.loadIsStreamActive())
-    val isStreamActive: StateFlow<Boolean> = _isStreamActive.asStateFlow()
+    // Controla si la app debe iniciar reproduciendo la radio en directo.
+    private val _autoPlayStreamOnStart = MutableStateFlow(appPreferences.loadAutoPlayStreamOnStart())
+    val autoPlayStreamOnStart: StateFlow<Boolean> = _autoPlayStreamOnStart.asStateFlow()
 
     private val _isManuallySetToDarkTheme = MutableStateFlow<Boolean?>(appPreferences.loadIsManuallySetDarkTheme())
     val isManuallySetToDarkTheme: StateFlow<Boolean?> = _isManuallySetToDarkTheme.asStateFlow()
@@ -44,12 +43,12 @@ class SettingsViewModel(
         get() = Config.MAIN_WEBSITE_URL
 
     /**
-     * Alterna la preferencia de si el streaming debe estar activo al iniciar la app.
+     * Alterna la preferencia de si la radio debe empezar reproduciendo al abrir la app.
      */
-    fun toggleStreamActive() {
-        val newState = !_isStreamActive.value
-        appPreferences.saveIsStreamActive(newState)
-        _isStreamActive.value = newState
+    fun toggleAutoPlayStreamOnStart() {
+        val newState = !_autoPlayStreamOnStart.value
+        appPreferences.saveAutoPlayStreamOnStart(newState)
+        _autoPlayStreamOnStart.value = newState
     }
 
     /**

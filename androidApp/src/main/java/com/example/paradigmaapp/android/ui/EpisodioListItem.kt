@@ -13,8 +13,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.material.icons.filled.Check
+import kotlin.math.roundToInt
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -33,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.paradigmaapp.android.viewmodel.DownloadStatus
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,7 +86,9 @@ fun EpisodeListItem(
     isDownloaded: Boolean,
     isInQueue: Boolean,
     isParentScrolling: Boolean,
-    modifier: Modifier = Modifier
+    currentDownloadStatus: DownloadStatus? = null,
+    modifier: Modifier = Modifier,
+    showPauseOverlay: Boolean = false
 ) {
     // Estado para controlar la visibilidad del menú de opciones.
     var showContextMenu by remember { mutableStateOf(false) }
@@ -103,9 +115,6 @@ fun EpisodeListItem(
                 modifier = Modifier.size(72.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (isLoading) {
-                    // Intentionally no visual indicator; keeps parameter in use while avoiding yellow spinner.
-                }
                 val density = LocalDensity.current.density
                 val targetPx = remember(density) { dpToPreferredSquarePx(72f, density) }
                 val imageSource = remember(episode.imageUrl, episode.imageOriginalUrl, targetPx) {
@@ -127,7 +136,59 @@ fun EpisodeListItem(
                     error = painterResource(R.mipmap.logo_foreground),
                     placeholder = painterResource(R.mipmap.logo_foreground)
                 )
+
+                // Filtro gris y "borrado" radial para descarga activa
+                if (currentDownloadStatus != null && currentDownloadStatus.episodeId == episode.id) {
+                    val clampedProgress = currentDownloadStatus.progress.coerceIn(0f, 1f)
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        drawRect(
+                            color = Color(0xAA222222),
+                            size = size
+                        )
+                        if (clampedProgress > 0f) {
+                            drawArc(
+                                color = Color.Transparent,
+                                startAngle = -90f,
+                                sweepAngle = clampedProgress * 360f,
+                                useCenter = true,
+                                alpha = 0.0f,
+                                blendMode = androidx.compose.ui.graphics.BlendMode.Clear
+                            )
+                        }
+                    }
+                    if (currentDownloadStatus.isComplete) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Descarga finalizada",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "${(clampedProgress * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                }
+                // Overlay de pausa para episodios en cola de descarga
+                if (showPauseOverlay) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        drawRect(
+                            color = Color(0xAA222222),
+                            size = size
+                        )
+                    }
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Pause,
+                        contentDescription = "En cola de descarga",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
+// Eliminado DownloadProgressIndicator: ahora el efecto de descarga se muestra sobre la portada
 
             // Columna con el título y la duración del Episode.
             Column(

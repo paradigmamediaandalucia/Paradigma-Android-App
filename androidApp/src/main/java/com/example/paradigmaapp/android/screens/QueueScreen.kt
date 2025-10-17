@@ -47,6 +47,7 @@ fun QueueScreen(
     val queueEpisodes by queueViewModel.queueEpisodes.collectAsState()
     val downloadedEpisodes by downloadedViewModel.downloadedEpisodes.collectAsState()
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
+    val currentDownloadStatus by downloadedViewModel.currentDownloadStatus.collectAsState()
 
     // Controladores de UI y corutinas
     val snackbarHostState = remember { SnackbarHostState() }
@@ -101,6 +102,7 @@ fun QueueScreen(
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = true, // Todos en esta lista están en la cola
                             isParentScrolling = listState.isScrollInProgress,
+                            currentDownloadStatus = currentDownloadStatus,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }

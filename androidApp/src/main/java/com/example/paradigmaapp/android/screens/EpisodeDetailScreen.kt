@@ -226,7 +226,7 @@ fun EpisodeDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 IconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) {
-                                    Icon(Icons.Filled.PlayArrow, "Reproducir Episode", tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Filled.PlayArrow, "Reproducir episodio", tint = MaterialTheme.colorScheme.primary)
                                 }
                                 val queueIcon = if (isInQueue) Icons.Filled.RemoveCircleOutline else Icons.Filled.PlaylistAdd
                                 val queueAction = if (isInQueue) "Quitar de cola" else "Añadir a cola"
@@ -236,7 +236,7 @@ fun EpisodeDetailScreen(
                                     Icon(queueIcon, queueAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 val downloadIcon = if (isDownloaded) Icons.Filled.DeleteOutline else Icons.Filled.Download
-                                val downloadAction = if (isDownloaded) "Borrar Descarga" else "Descargar Episode"
+                                val downloadAction = if (isDownloaded) "Borrar descarga" else "Descargar episodio"
                                 IconButton(
                                     onClick = {
                                         if (isDownloaded) {
@@ -270,7 +270,7 @@ fun EpisodeDetailScreen(
                     }
                 }
                 else -> {
-                    ErrorView(message = "No se pudo cargar la información del Episode.", errorType = ErrorType.NO_RESULTS, onRetry = { episodeDetailViewModel.loadEpisodeDetails() }, modifier = Modifier.align(Alignment.Center))
+                    ErrorView(message = "No se pudo cargar la información del episodio.", errorType = ErrorType.NO_RESULTS, onRetry = { episodeDetailViewModel.loadEpisodeDetails() }, modifier = Modifier.align(Alignment.Center))
                 }
             }
         }

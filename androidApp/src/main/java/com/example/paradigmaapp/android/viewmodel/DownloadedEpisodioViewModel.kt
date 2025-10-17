@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import java.util.LinkedList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -18,6 +20,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.Result
+import kotlin.io.DEFAULT_BUFFER_SIZE
 
 /**
  * ViewModel responsable de gestionar la lógica y el estado de los Episodes descargados.
@@ -30,6 +33,13 @@ import kotlin.Result
  *
  * @author Mario Alguacil Juárez
  */
+data class DownloadStatus(
+    val episodeId: String,
+    val title: String,
+    val progress: Float,
+    val isComplete: Boolean
+)
+
 class DownloadedEpisodeViewModel(
     private val appPreferences: AppPreferences,
     private val repository: Repository,
@@ -40,8 +50,20 @@ class DownloadedEpisodeViewModel(
     private val _downloadedEpisodes = MutableStateFlow<List<Episode>>(emptyList())
     val downloadedEpisodes: StateFlow<List<Episode>> = _downloadedEpisodes.asStateFlow()
 
+
     /** Un conjunto de IDs para rastrear las descargas que están actualmente en progreso y evitar duplicados. */
-    private val downloadsInProgress = mutableSetOf<String>()
+    private val downloadsInProgress = mutableMapOf<String, String>()
+
+    /** Cola de episodios pendientes de descarga. */
+    private val downloadQueue = LinkedList<Episode>()
+
+    /** Estado observable de la cola de descargas. */
+    private val _queuedEpisodes = MutableStateFlow<List<Episode>>(emptyList())
+    val queuedEpisodes: StateFlow<List<Episode>> = _queuedEpisodes.asStateFlow()
+
+    /** Estado de la descarga en curso (si existe). */
+    private val _currentDownloadStatus = MutableStateFlow<DownloadStatus?>(null)
+    val currentDownloadStatus: StateFlow<DownloadStatus?> = _currentDownloadStatus.asStateFlow()
 
     /** Límite máximo de Episodes que se pueden descargar. */
     private val MAX_DOWNLOADS = 10
@@ -70,22 +92,40 @@ class DownloadedEpisodeViewModel(
      */
     fun downloadEpisode(episode: Episode, onResult: (Result<Unit>) -> Unit) {
         if (isEpisodeDownloaded(episode.id)) {
-            onResult(Result.failure(IllegalStateException("El Episode ya está descargado.")))
+            onResult(Result.failure(IllegalStateException("El episodio ya está descargado.")))
             return
         }
-        if (downloadsInProgress.contains(episode.id)) {
-            // La descarga ya está en curso, no se hace nada para no duplicar notificaciones.
+        if (downloadsInProgress.containsKey(episode.id) || downloadQueue.any { it.id == episode.id }) {
+            // Ya está en curso o en cola
             return
         }
-        if (_downloadedEpisodes.value.size >= MAX_DOWNLOADS) {
-            onResult(Result.failure(IOException("Máximo de $MAX_DOWNLOADS Episodes descargados alcanzado.")))
+        if (_downloadedEpisodes.value.size + downloadQueue.size >= MAX_DOWNLOADS) {
+            onResult(Result.failure(IOException("Máximo de $MAX_DOWNLOADS episodios descargados alcanzado.")))
             return
         }
 
+        // Si hay una descarga activa, encola
+        if (downloadsInProgress.isNotEmpty()) {
+            downloadQueue.add(episode)
+            _queuedEpisodes.value = downloadQueue.toList()
+            return
+        }
+        // Si no, inicia la descarga
+        startDownload(episode, onResult)
+    }
+
+    private fun startDownload(episode: Episode, onResult: (Result<Unit>) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val file = File(applicationContext.filesDir, createFileName(episode))
+            var downloadSucceeded = false
             try {
-                downloadsInProgress.add(episode.id)
+                downloadsInProgress[episode.id] = episode.title
+                _currentDownloadStatus.value = DownloadStatus(
+                    episodeId = episode.id,
+                    title = episode.title,
+                    progress = 0f,
+                    isComplete = false
+                )
 
                 val sourceUrl = episode.downloadUrl?.takeIf { it.isNotBlank() } ?: episode.audioUrl
                 val url = URL(sourceUrl)
@@ -96,15 +136,47 @@ class DownloadedEpisodeViewModel(
                     throw IOException("Error del servidor: ${connection.responseCode}")
                 }
 
-                FileOutputStream(file).use { output -> connection.inputStream.use { it.copyTo(output) } }
+                val contentLength = connection.contentLengthLong.takeIf { it > 0 } ?: -1L
+                var bytesCopied = 0L
 
-                val listaActualizada = _downloadedEpisodes.value + episode
+                connection.inputStream.use { input ->
+                    FileOutputStream(file).use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val bytesRead = input.read(buffer)
+                            if (bytesRead == -1) break
+                            output.write(buffer, 0, bytesRead)
+                            if (contentLength > 0) {
+                                bytesCopied += bytesRead
+                                val fraction = (bytesCopied.toDouble() / contentLength.toDouble()).toFloat().coerceIn(0f, 1f)
+                                _currentDownloadStatus.update { status ->
+                                    if (status?.episodeId == episode.id) status.copy(progress = fraction) else status
+                                }
+                            }
+                        }
+                        output.flush()
+                    }
+                }
+
+                // Agrega el episodio a la lista de descargas ANTES de terminar la descarga
+                val listaActualizada = if (_downloadedEpisodes.value.any { it.id == episode.id }) {
+                    _downloadedEpisodes.value
+                } else {
+                    _downloadedEpisodes.value + episode
+                }
                 appPreferences.saveDownloadedEpisodes(listaActualizada)
-
                 withContext(Dispatchers.Main) {
                     _downloadedEpisodes.value = listaActualizada
+                }
+
+                _currentDownloadStatus.update { status ->
+                    if (status?.episodeId == episode.id) status.copy(progress = 1f, isComplete = true) else status
+                }
+
+                withContext(Dispatchers.Main) {
                     onResult(Result.success(Unit)) // Notifica éxito
                 }
+                downloadSucceeded = true
             } catch (e: Exception) {
                 file.delete()
                 withContext(Dispatchers.Main) {
@@ -112,6 +184,26 @@ class DownloadedEpisodeViewModel(
                 }
             } finally {
                 downloadsInProgress.remove(episode.id)
+                if (!downloadSucceeded) {
+                    _currentDownloadStatus.update { status ->
+                        if (status?.episodeId == episode.id) null else status
+                    }
+                } else {
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(1200)
+                        _currentDownloadStatus.update { status ->
+                            if (status?.episodeId == episode.id && status.isComplete) null else status
+                        }
+                    }
+                }
+                // Al terminar, inicia la siguiente descarga en cola si existe
+                if (downloadQueue.isNotEmpty()) {
+                    val next = downloadQueue.poll()
+                    _queuedEpisodes.value = downloadQueue.toList()
+                    if (next != null) startDownload(next) { }
+                } else {
+                    _queuedEpisodes.value = emptyList()
+                }
             }
         }
     }
@@ -150,6 +242,7 @@ class DownloadedEpisodeViewModel(
                 }
                 appPreferences.clearDownloadedEpisodes()
                 downloadsInProgress.clear()
+                _currentDownloadStatus.value = null
                 withContext(Dispatchers.Main) {
                     _downloadedEpisodes.value = emptyList()
                     onResult(Result.success(Unit))

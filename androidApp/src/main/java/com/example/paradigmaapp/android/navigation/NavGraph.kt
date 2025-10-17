@@ -85,7 +85,7 @@ fun NavGraph(
     val isAndainaPlaying by mainViewModel.isAndainaPlaying.collectAsState()
     val isPlayingGeneral = if (currentPlayingEpisode != null) isPodcastPlaying else isAndainaPlaying
     val episodeProgress by mainViewModel.podcastProgress.collectAsState()
-    val isAndainaStreamActive by settingsViewModel.isStreamActive.collectAsState()
+    val isAndainaStreamActive by mainViewModel.isAndainaStreamActive.collectAsState()
     val andainaRadioInfo by mainViewModel.andainaRadioInfo.collectAsState()
     val volumeBottomSheetScaffoldState = rememberBottomSheetScaffoldState()
     val isFullScreenPlayerVisible by mainViewModel.isFullScreenPlayerVisible.collectAsState()

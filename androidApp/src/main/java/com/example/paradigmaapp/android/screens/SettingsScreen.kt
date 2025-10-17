@@ -67,7 +67,7 @@ fun SettingsScreen(
     appVersionName: String
 ) {
     val uriHandler = LocalUriHandler.current
-    val isStreamActive by settingsViewModel.isStreamActive.collectAsState()
+    val autoPlayStreamOnStart by settingsViewModel.autoPlayStreamOnStart.collectAsState()
     val isManuallySetToDarkTheme by settingsViewModel.isManuallySetToDarkTheme.collectAsState()
     val rememberEpisodeProgress by settingsViewModel.rememberEpisodeProgress.collectAsState()
     val autoPlayNextEpisode by settingsViewModel.autoPlayNextEpisode.collectAsState()
@@ -108,11 +108,11 @@ fun SettingsScreen(
             }
             SettingItemRow(
                 title = "Abrir con Radio en Directo",
-                description = "Iniciar la app con el stream de Andaina FM activo."
+                description = "Si está desactivado, la app abrirá con la radio en pausa."
             ) {
                 Switch(
-                    checked = isStreamActive,
-                    onCheckedChange = { settingsViewModel.toggleStreamActive() }
+                    checked = autoPlayStreamOnStart,
+                    onCheckedChange = { settingsViewModel.toggleAutoPlayStreamOnStart() }
                 )
             }
             SettingItemRow(
@@ -166,13 +166,13 @@ fun SettingsScreen(
             Text(text = "Ayuda y Funcionalidades", style = MaterialTheme.typography.titleLarge)
             HelpItem(
                 icon = Icons.Default.TouchApp,
-                title = "Ver Detalles del Episode",
-                description = "Mantén pulsado cualquier Episode en una lista para ver su pantalla de detalles completa."
+                title = "Ver detalles del episodio",
+                description = "Mantén pulsado cualquier episodio en una lista para ver su pantalla de detalles completa."
             )
             HelpItem(
                 icon = Icons.Default.OpenInFull,
                 title = "Reproductor Ampliado",
-                description = "Pulsa sobre la información del Episode en el reproductor inferior para abrir la vista a pantalla completa."
+                description = "Pulsa sobre la información del episodio en el reproductor inferior para abrir la vista a pantalla completa."
             )
             ListDivider()
 
@@ -181,11 +181,6 @@ fun SettingsScreen(
                 icon = Icons.Default.PlayCircle,
                 title = "Reproducir / Pausar",
                 description = "El botón central grande inicia o detiene la reproducción del contenido actual."
-            )
-            HelpItem(
-                icon = Icons.Default.VolumeUp,
-                title = "Control de Volumen",
-                description = "Pulsa el icono del altavoz para mostrar y ajustar el nivel del volumen."
             )
             HelpItem(
                 icon = Icons.Default.Podcasts,
@@ -200,16 +195,16 @@ fun SettingsScreen(
                 title = "Inicio",
                 description = "El icono de la pestaña activa se convierte en 'Inicio' para volver rápidamente a la lista de programas."
             )
-            HelpItem(icon = Icons.Default.Search, title = "Buscar", description = "Encuentra cualquier Episode por título o descripción.")
-            HelpItem(icon = Icons.Default.History, title = "Continuar", description = "Aquí aparecen los Episodes que has empezado a escuchar pero no has terminado.")
-            HelpItem(icon = Icons.Default.Download, title = "Descargas", description = "Accede a los Episodes guardados para escucharlos sin conexión.")
-            HelpItem(icon = Icons.AutoMirrored.Filled.List, title = "Cola", description = "Organiza una lista de reproducción con los Episodes que quieres escuchar a continuación.")
+            HelpItem(icon = Icons.Default.Search, title = "Buscar", description = "Encuentra cualquier episodio por título o descripción.")
+            HelpItem(icon = Icons.Default.History, title = "Continuar", description = "Aquí aparecen los episodios que has empezado a escuchar pero no has terminado.")
+            HelpItem(icon = Icons.Default.Download, title = "Descargas", description = "Accede a los episodios guardados para escucharlos sin conexión.")
+            HelpItem(icon = Icons.AutoMirrored.Filled.List, title = "Cola", description = "Organiza una lista de reproducción con los episodios que quieres escuchar a continuación.")
             HelpItem(icon = Icons.Default.Settings, title = "Ajustes", description = "Configura las preferencias de la aplicación y consulta esta ayuda.")
             ListDivider()
 
-            Text(text = "Opciones adicionales Episodes", style = MaterialTheme.typography.titleLarge)
-            HelpItem(icon = Icons.Default.Download, title = "Descargar Episode", description = "Desde los tres puntitos o la vista detalla del Episode, puedes descargarlo o eliminarlo a tu dispositivo.")
-            HelpItem(icon = Icons.AutoMirrored.Filled.List, title = "Añadir a cola", description = "Desde los tres puntitos o la vista detalla del Episode, puedes añadirlo o elimnarlo a la cola de reproducción.")
+            Text(text = "Opciones adicionales para episodios", style = MaterialTheme.typography.titleLarge)
+            HelpItem(icon = Icons.Default.Download, title = "Descargar episodio", description = "Desde los tres puntitos o la vista de detalle del episodio puedes descargarlo o eliminarlo de tu dispositivo.")
+            HelpItem(icon = Icons.AutoMirrored.Filled.List, title = "Añadir a la cola", description = "Desde los tres puntitos o la vista de detalle del episodio puedes añadirlo o eliminarlo de la cola de reproducción.")
             ListDivider()
 
 
@@ -220,7 +215,7 @@ fun SettingsScreen(
             )
             SettingItemRow(
                 title = "Vaciar cola de reproducción",
-                description = "Elimina todos los Episodes pendientes en la cola."
+                description = "Elimina todos los episodios pendientes en la cola."
             ) {
                 Button(onClick = onClearQueue, colors = dataActionButtonColors) {
                     Text("Vaciar")
@@ -228,7 +223,7 @@ fun SettingsScreen(
             }
             SettingItemRow(
                 title = "Eliminar descargas",
-                description = "Borra por completo los Episodes guardados en el dispositivo."
+                description = "Borra por completo los episodios guardados en el dispositivo."
             ) {
                 Button(
                     onClick = onClearDownloads,
@@ -239,7 +234,7 @@ fun SettingsScreen(
             }
             SettingItemRow(
                 title = "Limpiar historial de escucha",
-                description = "Reinicia la lista de Episodes en curso y sus progresos."
+                description = "Reinicia la lista de episodios en curso y sus progresos."
             ) {
                 Button(onClick = onClearListeningHistory, colors = dataActionButtonColors) {
                     Text("Limpiar")

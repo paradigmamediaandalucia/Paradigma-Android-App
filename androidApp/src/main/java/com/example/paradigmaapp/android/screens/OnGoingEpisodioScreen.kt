@@ -68,6 +68,7 @@ fun OnGoingEpisodeScreen(
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
     val downloadedEpisodes by downloadedViewModel.downloadedEpisodes.collectAsState()
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
+    val currentDownloadStatus by downloadedViewModel.currentDownloadStatus.collectAsState()
 
     // Controladores de UI y corutinas
     val snackbarHostState = remember { SnackbarHostState() }
@@ -88,20 +89,20 @@ fun OnGoingEpisodeScreen(
         ) {
             Spacer(modifier = Modifier.height(topContentPadding))
             if (onGoingEpisodes.isEmpty()) {
-                // Mensaje si no hay Episodes en progreso.
+                // Mensaje si no hay episodios en progreso.
                 Box(
                     modifier = Modifier.fillMaxSize().padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No tienes Episodes en progreso.",
+                        text = "No tienes episodios en progreso.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
                 }
             } else {
-                // Lista de Episodes en progreso.
+                // Lista de episodios en progreso.
                 val listState = rememberLazyListState()
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -130,6 +131,7 @@ fun OnGoingEpisodeScreen(
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = queueEpisodeIds.contains(episode.id),
                             isParentScrolling = listState.isScrollInProgress,
+                            currentDownloadStatus = currentDownloadStatus,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }

@@ -1,7 +1,9 @@
 package com.example.paradigmaapp.android.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,12 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -53,7 +59,9 @@ import com.example.paradigmaapp.android.utils.rememberCoilImageRequest
 import com.example.paradigmaapp.android.utils.selectSpreakerImageSource
 import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
+import com.example.paradigmaapp.android.viewmodel.DownloadStatus
 import com.example.paradigmaapp.android.viewmodel.VolumeControlViewModel
+import kotlin.math.roundToInt
 
 /**
  * Un Composable que renderiza la pantalla del reproductor a pantalla completa.
@@ -82,6 +90,7 @@ fun FullScreenPlayerScreen(
     val duration by mainViewModel.podcastDuration.collectAsState()
     val hasNextEpisode by mainViewModel.hasNextEpisode.collectAsState()
     val hasPreviousEpisode by mainViewModel.hasPreviousEpisode.collectAsState()
+    val currentDownloadStatus by mainViewModel.downloadedViewModel.currentDownloadStatus.collectAsState()
 
     Scaffold(
         topBar = {
@@ -106,6 +115,16 @@ fun FullScreenPlayerScreen(
             verticalArrangement = Arrangement.SpaceAround
         ) {
             currentEpisode?.let { episode ->
+                currentDownloadStatus?.let { status ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        DownloadStatusChip(status = status)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 val configuration = LocalConfiguration.current
                 val density = LocalDensity.current.density
                 val imageWidthDp = (configuration.screenWidthDp - 48).coerceAtLeast(160)
@@ -186,7 +205,7 @@ fun FullScreenPlayerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "Episode Anterior",
+                            contentDescription = "Episodio anterior",
                             modifier = Modifier.fillMaxSize(),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -211,7 +230,7 @@ fun FullScreenPlayerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipNext,
-                            contentDescription = "Siguiente Episode",
+                            contentDescription = "Siguiente episodio",
                             modifier = Modifier.fillMaxSize(),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -220,6 +239,87 @@ fun FullScreenPlayerScreen(
 
                 VolumeControl(volumeControlViewModel = volumeControlViewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun DownloadStatusChip(status: DownloadStatus) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        DownloadProgressIndicator(
+            progress = status.progress,
+            isComplete = status.isComplete,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = if (status.isComplete) "Descarga lista" else "Descargando",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = status.title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun DownloadProgressIndicator(
+    progress: Float,
+    isComplete: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val strokeWidth = with(LocalDensity.current) { 6.dp.toPx() }
+    val clampedProgress = progress.coerceIn(0f, 1f)
+    val backgroundColor = Color(0xFFFFD54F)
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(color = backgroundColor)
+            if (clampedProgress > 0f && !isComplete) {
+                drawArc(
+                    color = Color.Black,
+                    startAngle = -90f,
+                    sweepAngle = clampedProgress * 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            } else if (isComplete) {
+                drawArc(
+                    color = Color.Black,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
+        }
+        if (isComplete) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Descarga finalizada",
+                tint = Color.Black,
+                modifier = Modifier.size(22.dp)
+            )
+        } else {
+            Text(
+                text = "${(clampedProgress * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.Black,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

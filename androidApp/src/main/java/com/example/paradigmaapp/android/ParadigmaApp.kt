@@ -12,6 +12,14 @@ import com.example.paradigmaapp.android.viewmodel.SettingsViewModel
 import com.example.paradigmaapp.android.viewmodel.ViewModelFactory
 import com.example.paradigmaapp.android.viewmodel.VolumeControlViewModel
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.paradigmaapp.android.ui.FloatingDownloadProgressOverlay
+
 /**
  * Composable raíz y punto de entrada de la interfaz de la aplicación.
  * Actúa como un "interruptor": muestra la pantalla de bienvenida (`OnboardingScreen`)
@@ -35,7 +43,6 @@ fun ParadigmaApp(
 
     if (hasCompletedOnboarding) {
         val navController = rememberNavController()
-        // Pasa la instancia del ViewModel de ajustes al grafo de navegación.
         NavGraph(
             navController = navController,
             viewModelFactory = viewModelFactory,

@@ -52,6 +52,8 @@ import com.example.paradigmaapp.model.stableListKey
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
+
 fun DownloadedEpisodeScreen(
     downloadedEpisodeViewModel: DownloadedEpisodeViewModel,
     mainViewModel: MainViewModel,
@@ -62,8 +64,10 @@ fun DownloadedEpisodeScreen(
 ) {
     // Estados de la pantalla
     val downloadedEpisodes by downloadedEpisodeViewModel.downloadedEpisodes.collectAsState()
+    val queuedEpisodes by downloadedEpisodeViewModel.queuedEpisodes.collectAsState()
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
     val preparingEpisodeId by mainViewModel.preparingEpisodeId.collectAsState()
+    val currentDownloadStatus by downloadedEpisodeViewModel.currentDownloadStatus.collectAsState()
 
     // Controladores de UI y corutinas
     val snackbarHostState = remember { SnackbarHostState() }
@@ -83,32 +87,35 @@ fun DownloadedEpisodeScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Spacer(modifier = Modifier.height(topContentPadding))
-            if (downloadedEpisodes.isEmpty()) {
+            val allEpisodes = downloadedEpisodes + queuedEpisodes
+            if (allEpisodes.isEmpty()) {
                 // Mensaje si no hay descargas.
                 Box(
                     modifier = Modifier.fillMaxSize().padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No tienes Episodes descargados.",
+                        text = "No tienes episodios descargados.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
                 }
             } else {
-                // Lista de Episodes descargados.
+                // Lista de Episodes descargados y en cola.
                 val listState = rememberLazyListState()
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
                     contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = LayoutConstants.bottomContentPadding)
                 ) {
-                    items(downloadedEpisodes, key = { it.stableListKey() }) { episode ->
+                    items(allEpisodes, key = { it.stableListKey() }) { episode ->
                         val isLoading = episode.id == preparingEpisodeId
+                        val isQueued = queuedEpisodes.any { it.id == episode.id }
+                        val showPauseOverlay = isQueued
                         EpisodeListItem(
                             episode = episode,
-                            isLoading = isLoading, // <-- Pasando el estado de carga
+                            isLoading = isLoading,
                             onPlayEpisode = { onEpisodeSelected(it) },
                             onEpisodeLongClick = { onEpisodeLongClicked(it) },
                             onAddToQueue = { queueViewModel.addEpisodeToQueue(it) },
@@ -123,10 +130,12 @@ fun DownloadedEpisodeScreen(
                                 }
                             },
                             onDeleteDownload = { downloadedEpisodeViewModel.deleteDownloadedEpisode(it) },
-                            isDownloaded = true, // Todos en esta lista están descargados
+                            isDownloaded = !isQueued,
                             isInQueue = queueEpisodeIds.contains(episode.id),
                             isParentScrolling = listState.isScrollInProgress,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            currentDownloadStatus = currentDownloadStatus,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            showPauseOverlay = showPauseOverlay
                         )
                     }
                 }

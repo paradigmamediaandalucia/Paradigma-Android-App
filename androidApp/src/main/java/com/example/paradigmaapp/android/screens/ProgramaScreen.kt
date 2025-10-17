@@ -75,6 +75,7 @@ fun ProgramaScreen(
     // Estados para la Snackbar, descargas y cola.
     val snackbarHostState = remember { SnackbarHostState() }
     val downloadedEpisodes by downloadedViewModel.downloadedEpisodes.collectAsState()
+    val currentDownloadStatus by downloadedViewModel.currentDownloadStatus.collectAsState()
     val queueEpisodeIds by queueViewModel.queueEpisodeIds.collectAsState()
 
     // Recoge el ID del Episode que se está preparando para la reproducción.
@@ -107,7 +108,7 @@ fun ProgramaScreen(
 
                     if (programa != null) {
                         Text(
-                            text = "Episodes",
+                            text = "Episodios",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
@@ -127,7 +128,7 @@ fun ProgramaScreen(
 
                         EpisodeListItem(
                             episode = episode,
-                            isLoading = isLoading, // Se pasa el estado de carga
+                            isLoading = isLoading,
                             onPlayEpisode = { mainViewModel.selectEpisode(it) },
                             onEpisodeLongClick = onEpisodeLongClicked,
                             onAddToQueue = { queueViewModel.addEpisodeToQueue(it) },
@@ -145,6 +146,7 @@ fun ProgramaScreen(
                             isDownloaded = downloadedEpisodes.any { it.id == episode.id },
                             isInQueue = queueEpisodeIds.contains(episode.id),
                             isParentScrolling = listState.isScrollInProgress,
+                            currentDownloadStatus = currentDownloadStatus,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }
@@ -173,7 +175,7 @@ fun ProgramaScreen(
                 }
                 is LoadState.Error -> {
                     ErrorView(
-                        message = "Error al cargar Episodes:\n${state.error.localizedMessage}",
+                        message = "Error al cargar episodios:\n${state.error.localizedMessage}",
                         onRetry = { lazyPagingItems.retry() },
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -181,7 +183,7 @@ fun ProgramaScreen(
                 else -> {
                     if (lazyPagingItems.itemCount == 0 && lazyPagingItems.loadState.append.endOfPaginationReached) {
                         Box(modifier = Modifier.align(Alignment.Center).padding(16.dp)) {
-                            Text("No hay Episodes disponibles para este programa.", textAlign = TextAlign.Center)
+                            Text("No hay episodios disponibles para este programa.", textAlign = TextAlign.Center)
                         }
                     }
                 }
