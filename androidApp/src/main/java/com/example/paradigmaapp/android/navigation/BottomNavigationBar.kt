@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.paradigmaapp.android.ui.BottomNavItem
 import com.example.paradigmaapp.android.ui.navigateToScreenIfDifferent
@@ -58,7 +59,20 @@ fun BottomNavigationBar(
                 label = { Text(labelText) },
                 selected = currentRoute == item.route,
                 onClick = {
-                    navigateToScreenIfDifferent(navController, item.route)
+                    if (item is BottomNavItem.Home) {
+                        val popped = navController.popBackStack(Screen.Home.route, inclusive = false)
+                        if (!popped) {
+                            navController.navigate(Screen.Home.route) {
+                                launchSingleTop = true
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                restoreState = true
+                            }
+                        }
+                    } else {
+                        navigateToScreenIfDifferent(navController, item.route)
+                    }
                 },
                 colors = NavigationBarItemDefaults.colors(
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
