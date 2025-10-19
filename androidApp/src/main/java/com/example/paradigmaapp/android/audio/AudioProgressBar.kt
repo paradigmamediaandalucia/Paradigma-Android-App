@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 /**
@@ -39,21 +40,23 @@ fun AudioProgressBar(
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+    val thumbRadiusPx = with(LocalDensity.current) { 8.dp.toPx() }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(16.dp) // Altura suficiente para que el gesto de arrastre sea cómodo
+            .height(24.dp) // Altura suficiente para que el gesto de arrastre sea cómodo y evitar cortes del pulgar
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
-                        // Al empezar a arrastrar, actualizamos la posición
-                        val newPosition = (offset.x / size.width).coerceIn(0f, 1f)
+                        val availableWidth = (size.width - 2 * thumbRadiusPx).coerceAtLeast(1f)
+                        val newPosition = ((offset.x - thumbRadiusPx) / availableWidth).coerceIn(0f, 1f)
                         onDragChange(newPosition)
                     },
                     onHorizontalDrag = { change, _ ->
                         change.consume()
-                        val newPosition = (change.position.x / size.width).coerceIn(0f, 1f)
+                        val availableWidth = (size.width - 2 * thumbRadiusPx).coerceAtLeast(1f)
+                        val newPosition = ((change.position.x - thumbRadiusPx) / availableWidth).coerceIn(0f, 1f)
                         onDragChange(newPosition)
                     },
                     onDragEnd = { onDragEnd() },
@@ -64,15 +67,29 @@ fun AudioProgressBar(
         // Usamos un Canvas para dibujar la barra y el círculo de forma personalizada.
         Canvas(modifier = Modifier.fillMaxSize()) {
             val barHeight = 4.dp.toPx()
+            val trackStart = thumbRadiusPx
+            val trackEnd = size.width - thumbRadiusPx
+            val trackWidth = (trackEnd - trackStart).coerceAtLeast(0f)
+
             // Dibuja la barra de fondo
-            drawLine(surfaceVariantColor.copy(alpha = 0.3f), start = Offset(0f, center.y), end = Offset(size.width, center.y), strokeWidth = barHeight)
+            drawLine(
+                color = surfaceVariantColor.copy(alpha = 0.3f),
+                start = Offset(trackStart, center.y),
+                end = Offset(trackEnd, center.y),
+                strokeWidth = barHeight
+            )
             // Dibuja la parte de la barra que ya se ha reproducido
-            val progressWidth = size.width * progress
-            drawLine(secondaryColor, start = Offset.Zero.copy(y = center.y), end = Offset(progressWidth, center.y), strokeWidth = barHeight)
+            val progressX = trackStart + trackWidth * progress.coerceIn(0f, 1f)
+            drawLine(
+                color = secondaryColor,
+                start = Offset(trackStart, center.y),
+                end = Offset(progressX, center.y),
+                strokeWidth = barHeight
+            )
 
             // Dibuja el círculo en la posición de arrastre (o en la de reproducción si no se arrastra).
-            val circleX = (size.width * dragPosition).coerceIn(0f, size.width)
-            drawCircle(color = onPrimaryColor, radius = 6.dp.toPx(), center = Offset(circleX, center.y))
+            val circleX = trackStart + trackWidth * dragPosition.coerceIn(0f, 1f)
+            drawCircle(color = onPrimaryColor, radius = thumbRadiusPx, center = Offset(circleX, center.y))
         }
     }
 }

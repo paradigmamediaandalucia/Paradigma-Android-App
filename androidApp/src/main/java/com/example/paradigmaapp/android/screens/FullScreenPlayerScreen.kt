@@ -22,6 +22,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,10 +38,14 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +71,7 @@ import com.example.paradigmaapp.android.utils.unescapeHtmlEntities
 import com.example.paradigmaapp.android.viewmodel.MainViewModel
 import com.example.paradigmaapp.android.viewmodel.DownloadStatus
 import com.example.paradigmaapp.android.viewmodel.VolumeControlViewModel
+import com.example.paradigmaapp.android.viewmodel.NotificationType
 import kotlin.math.roundToInt
 
 /**
@@ -74,6 +85,7 @@ import kotlin.math.roundToInt
  * @param onBackClick Lambda que se invoca cuando el usuario pulsa el botón de retroceso
  * para cerrar esta pantalla.
  * @param volumeControlViewModel El ViewModel para la gestión del volumen.
+ * @param onOpenSettings Lambda para navegar a la pantalla de ajustes desde el reproductor.
  *
  * @author Mario Alguacil Juárez
  */
@@ -82,7 +94,8 @@ import kotlin.math.roundToInt
 fun FullScreenPlayerScreen(
     mainViewModel: MainViewModel,
     volumeControlViewModel: VolumeControlViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val currentEpisode by mainViewModel.currentPlayingEpisode.collectAsState()
     val isPlaying by mainViewModel.isPodcastPlaying.collectAsState()
@@ -91,6 +104,9 @@ fun FullScreenPlayerScreen(
     val hasNextEpisode by mainViewModel.hasNextEpisode.collectAsState()
     val hasPreviousEpisode by mainViewModel.hasPreviousEpisode.collectAsState()
     val currentDownloadStatus by mainViewModel.downloadedViewModel.currentDownloadStatus.collectAsState()
+    val queueEpisodeIds by mainViewModel.queueViewModel.queueEpisodeIds.collectAsState()
+    val downloadedEpisodes by mainViewModel.downloadedViewModel.downloadedEpisodes.collectAsState()
+    var overflowExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -99,6 +115,71 @@ fun FullScreenPlayerScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    currentEpisode?.let { episode ->
+                        IconButton(onClick = { overflowExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                        }
+                        val isInQueue = queueEpisodeIds.contains(episode.id)
+                        val isDownloaded = downloadedEpisodes.any { it.id == episode.id }
+                        DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text(if (isInQueue) "Quitar de la cola" else "Añadir a la cola") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (isInQueue) Icons.Default.RemoveCircleOutline else Icons.Default.PlaylistAdd,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    if (isInQueue) {
+                                        mainViewModel.queueViewModel.removeEpisodeFromQueue(episode)
+                                        mainViewModel.showTopNotification("Eliminado de la cola", NotificationType.SUCCESS)
+                                    } else {
+                                        mainViewModel.queueViewModel.addEpisodeToQueue(episode)
+                                        mainViewModel.showTopNotification("Añadido a la cola", NotificationType.SUCCESS)
+                                    }
+                                    overflowExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (isDownloaded) "Eliminar descarga" else "Descargar") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (isDownloaded) Icons.Default.DeleteOutline else Icons.Default.Download,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    if (isDownloaded) {
+                                        mainViewModel.downloadedViewModel.deleteDownloadedEpisode(episode)
+                                        mainViewModel.showTopNotification("Descarga eliminada", NotificationType.SUCCESS)
+                                        overflowExpanded = false
+                                    } else {
+                                        overflowExpanded = false
+                                        mainViewModel.downloadedViewModel.downloadEpisode(episode) { result ->
+                                            result.onSuccess {
+                                                mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
+                                            }.onFailure {
+                                                mainViewModel.showTopNotification("Descarga fallida", NotificationType.FAILURE)
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Ajustes") },
+                                leadingIcon = {
+                                    Icon(imageVector = Icons.Default.Settings, contentDescription = null)
+                                },
+                                onClick = {
+                                    overflowExpanded = false
+                                    onOpenSettings()
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -153,24 +234,16 @@ fun FullScreenPlayerScreen(
                     placeholder = painterResource(R.mipmap.logo_foreground)
                 )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = episode.title.unescapeHtmlEntities(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (duration > 0L) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = formatTime(duration),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = episode.title.unescapeHtmlEntities(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Slider(

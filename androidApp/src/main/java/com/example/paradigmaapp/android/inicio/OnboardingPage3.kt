@@ -4,11 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,10 +17,9 @@ import com.example.paradigmaapp.android.ui.InfoRow
 
 /**
  * Diapositiva 3: Pantalla final con la guía y el botón para entrar a la app.
- * @param onContinueClicked Lambda que se ejecuta al pulsar el botón "ACEPTAR".
  */
 @Composable
-fun OnboardingPage3(onContinueClicked: () -> Unit) {
+fun OnboardingPage3() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,20 +40,6 @@ fun OnboardingPage3(onContinueClicked: () -> Unit) {
         // Fila de información con un icono y texto de ayuda.
         InfoRow()
 
-        Spacer(Modifier.weight(1f)) // Empuja el botón hacia abajo
-
-        // Botón principal de la pantalla para continuar.
-        Button(
-            onClick = onContinueClicked,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.onPrimary,
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text("ACEPTAR")
-        }
+        Spacer(Modifier.weight(1f))
     }
 }

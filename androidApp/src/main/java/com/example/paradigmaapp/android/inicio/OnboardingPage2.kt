@@ -1,17 +1,28 @@
 package com.example.paradigmaapp.android.inicio
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -19,10 +30,11 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Diapositiva 2: Texto informativo largo.
- * @param onScreenClick Lambda que se ejecuta al hacer clic en cualquier parte de la pantalla.
  */
 @Composable
-fun OnboardingPage2(onScreenClick: () -> Unit) {
+fun OnboardingPage2() {
+    var expanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     val textoLargoPrincipal = "Paradigma Media Andalucía (en adelante Paradigma) es una iniciativa ciudadana que " +
             "surge de la necesidad de cubrir las carencias incuestionables que tiene la sociedad en " +
             "general, y la cordobesa en particular, sobre la información que le afecta de " +
@@ -46,19 +58,31 @@ fun OnboardingPage2(onScreenClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(onClick = onScreenClick)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()), // Permite scroll si el texto no cabe
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 24.dp, vertical = 32.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.Top
     ) {
-        Spacer(modifier = Modifier.height(38.dp))
-        Text(
-            text = textoLargoPrincipal,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Justify,
-            color = MaterialTheme.colorScheme.onPrimary
-        )
-        Spacer(Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+        ) {
+            Text(
+                text = textoLargoPrincipal,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Justify,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(
+                text = if (expanded) "Mostrar menos" else "Mostrar más",
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+        Spacer(modifier = Modifier.height(120.dp))
     }
 }

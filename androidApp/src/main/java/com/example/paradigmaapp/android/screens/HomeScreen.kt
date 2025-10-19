@@ -121,7 +121,7 @@ fun HomeScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2), // Cuadrícula con dos columnas
+                        columns = GridCells.Fixed(2),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
@@ -129,8 +129,8 @@ fun HomeScreen(
                             end = 16.dp,
                             bottom = LayoutConstants.bottomContentPadding + 16.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp), // Espacio vertical entre ítems
-                        horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio horizontal entre ítems
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(items = programas, key = { programa -> programa.id }) { programa ->
                             ProgramaListItem(

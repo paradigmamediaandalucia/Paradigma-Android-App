@@ -215,11 +215,22 @@ fun NavGraph(
             FullScreenPlayerScreen(
                 mainViewModel = mainViewModel,
                 volumeControlViewModel = volumeControlViewModel,
-                onBackClick = { mainViewModel.toggleFullScreenPlayer() }
+                onBackClick = { mainViewModel.toggleFullScreenPlayer() },
+                onOpenSettings = {
+                    mainViewModel.toggleFullScreenPlayer()
+                    navController.navigate(Screen.Settings.route) {
+                        launchSingleTop = true
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        restoreState = true
+                    }
+                }
             )
         }
 
         if (shouldShowTopActions) {
+            val isOnSettingsScreen = navBackStackEntry?.destination?.route == Screen.Settings.route
             val buttonBackground = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
             Box(
                 modifier = Modifier
@@ -254,20 +265,23 @@ fun NavGraph(
                     }
                 }
 
-                IconButton(
-                    onClick = { navigateToScreenIfDifferent(navController, Screen.Settings.route) },
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(44.dp)
-                        .shadow(6.dp, CircleShape, clip = false)
-                        .clip(CircleShape)
-                        .background(buttonBackground, CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = "Abrir ajustes",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                if (!isOnSettingsScreen) {
+                    IconButton(
+                        onClick = { navigateToScreenIfDifferent(navController, Screen.Settings.route) },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(top = 12.dp)
+                            .size(24.dp)
+                            .shadow(6.dp, CircleShape, clip = false)
+                            .clip(CircleShape)
+                            .background(buttonBackground, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Abrir ajustes",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }

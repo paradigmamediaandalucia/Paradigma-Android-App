@@ -1,13 +1,14 @@
 package com.example.paradigmaapp.android.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccessTimeFilled
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.navigation.Screen
 
 /**
@@ -17,24 +18,24 @@ import com.example.paradigmaapp.android.navigation.Screen
  * definidos aquí dentro, lo que hace el código más robusto.
  *
  * @property route La ruta de navegación asociada al item (de la clase Screen).
- * @property title El texto que se mostrará como etiqueta del item.
+ * @property titleRes El recurso de texto que se mostrará como etiqueta del item.
  * @property icon El icono que representará al item en la barra.
  *
  * @author Mario Alguacil Juárez
  */
 sealed class BottomNavItem(
     val route: String,
-    val title: String,
+    @StringRes val titleRes: Int,
     val icon: ImageVector
 ) {
-    /** Representa la pantalla de Inicio, que actúa como destino por defecto y reemplazo dinámico. */
-    data object Home : BottomNavItem(Screen.Home.route, "Inicio", Icons.Default.Home)
-    /** Representa la pantalla de Búsqueda. */
-    data object Search : BottomNavItem(Screen.Search.route, "Buscar", Icons.Default.Search)
-    /** Representa la pantalla de "Seguir Escuchando". */
-    data object OnGoing : BottomNavItem(Screen.OnGoing.route, "Continuar", Icons.Default.AccessTimeFilled)
-    /** Representa la pantalla de Descargas. */
-    data object Downloads : BottomNavItem(Screen.Downloads.route, "Descargas", Icons.Default.Download)
-    /** Representa la pantalla de la Cola de reproducción. */
-    data object Queue : BottomNavItem(Screen.Queue.route, "Cola", Icons.AutoMirrored.Filled.List)
+    /** Representa la pestaña de Inicio, mostrando la selección de programas. */
+    data object Home : BottomNavItem(Screen.Home.route, R.string.nav_home, Icons.Default.Home)
+    /** Representa la pestaña de Búsqueda. */
+    data object Search : BottomNavItem(Screen.Search.route, R.string.nav_search, Icons.Default.Search)
+    /** Representa la pestaña de "Seguir Escuchando". */
+    data object OnGoing : BottomNavItem(Screen.OnGoing.route, R.string.nav_continue, Icons.Default.AccessTimeFilled)
+    /** Representa la pestaña de Descargas. */
+    data object Downloads : BottomNavItem(Screen.Downloads.route, R.string.nav_downloads, Icons.Default.Download)
+    /** Representa la pestaña de la Cola de reproducción. */
+    data object Queue : BottomNavItem(Screen.Queue.route, R.string.nav_queue, Icons.AutoMirrored.Filled.List)
 }

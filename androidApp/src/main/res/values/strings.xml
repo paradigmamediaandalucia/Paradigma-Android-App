@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="attribution_audio_playback">Audio playback</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_continue">Continuar</string>
+    <string name="nav_downloads">Descargas</string>
+    <string name="nav_queue">Cola</string>
 </resources>

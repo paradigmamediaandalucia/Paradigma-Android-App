@@ -11,7 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.paradigmaapp.android.ui.BottomNavItem
@@ -52,9 +52,10 @@ fun BottomNavigationBar(
     ) {
         // Iteramos sobre cada uno de los items definidos.
         navItems.forEachIndexed { index, item ->
+            val labelText = stringResource(id = item.titleRes)
             NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title) },
+                icon = { Icon(item.icon, contentDescription = labelText) },
+                label = { Text(labelText) },
                 selected = currentRoute == item.route,
                 onClick = {
                     navigateToScreenIfDifferent(navController, item.route)

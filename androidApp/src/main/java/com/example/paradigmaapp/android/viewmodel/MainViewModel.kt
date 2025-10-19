@@ -413,8 +413,8 @@ class MainViewModel(
     /** * NUEVA FUNCIÓN: Controla la reproducción de la radio y actualiza el estado de las preferencias.
      */
     fun toggleAndainaStreamPlayer() {
-        // Detiene el podcast si se está reproduciendo
-        if (podcastExoPlayer.isPlaying) {
+        // Detiene cualquier reproducción de podcast antes de activar la radio
+        if (_currentPlayingEpisode.value != null) {
             podcastExoPlayer.stop()
             _currentPlayingEpisode.value = null
         }

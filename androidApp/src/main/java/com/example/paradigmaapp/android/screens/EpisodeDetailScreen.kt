@@ -1,6 +1,7 @@
 package com.example.paradigmaapp.android.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +19,9 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -201,7 +202,7 @@ fun EpisodeDetailScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 MetaDataItem(Icons.Default.DateRange, formatarFechaIso(episode.date))
@@ -220,40 +221,46 @@ fun EpisodeDetailScreen(
                             }
                             Spacer(modifier = Modifier.height(24.dp))
                             // Botones de acción
-                            Row(
+                            val actionButtonsScrollState = rememberScrollState()
+                            Box(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
+                                contentAlignment = Alignment.Center
                             ) {
-                                IconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) {
-                                    Icon(Icons.Filled.PlayArrow, "Reproducir episodio", tint = MaterialTheme.colorScheme.primary)
-                                }
-                                val queueIcon = if (isInQueue) Icons.Filled.RemoveCircleOutline else Icons.Filled.PlaylistAdd
-                                val queueAction = if (isInQueue) "Quitar de cola" else "Añadir a cola"
-                                IconButton(onClick = {
-                                    if (isInQueue) queueViewModel.removeEpisodeFromQueue(episode) else queueViewModel.addEpisodeToQueue(episode)
-                                }, modifier = Modifier.size(48.dp)) {
-                                    Icon(queueIcon, queueAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                val downloadIcon = if (isDownloaded) Icons.Filled.DeleteOutline else Icons.Filled.Download
-                                val downloadAction = if (isDownloaded) "Borrar descarga" else "Descargar episodio"
-                                IconButton(
-                                    onClick = {
-                                        if (isDownloaded) {
-                                            downloadedViewModel.deleteDownloadedEpisode(episode)
-                                        } else {
-                                            downloadedViewModel.downloadEpisode(episode) { result ->
-                                                result.onSuccess {
-                                                    mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
-                                                }.onFailure {
-                                                    mainViewModel.showTopNotification("Descarga fallida", NotificationType.FAILURE)
+                                Row(
+                                    modifier = Modifier.horizontalScroll(actionButtonsScrollState),
+                                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(onClick = { mainViewModel.selectEpisode(episode, true) }, modifier = Modifier.size(48.dp)) {
+                                        Icon(Icons.Filled.PlayArrow, "Reproducir episodio", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                    val queueIcon = if (isInQueue) Icons.Filled.RemoveCircleOutline else Icons.Filled.PlaylistAdd
+                                    val queueAction = if (isInQueue) "Quitar de cola" else "Añadir a cola"
+                                    IconButton(onClick = {
+                                        if (isInQueue) queueViewModel.removeEpisodeFromQueue(episode) else queueViewModel.addEpisodeToQueue(episode)
+                                    }, modifier = Modifier.size(48.dp)) {
+                                        Icon(queueIcon, queueAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    val downloadIcon = if (isDownloaded) Icons.Filled.DeleteOutline else Icons.Filled.Download
+                                    val downloadAction = if (isDownloaded) "Borrar descarga" else "Descargar episodio"
+                                    IconButton(
+                                        onClick = {
+                                            if (isDownloaded) {
+                                                downloadedViewModel.deleteDownloadedEpisode(episode)
+                                            } else {
+                                                downloadedViewModel.downloadEpisode(episode) { result ->
+                                                    result.onSuccess {
+                                                        mainViewModel.showTopNotification("Descarga completada", NotificationType.SUCCESS)
+                                                    }.onFailure {
+                                                        mainViewModel.showTopNotification("Descarga fallida", NotificationType.FAILURE)
+                                                    }
                                                 }
                                             }
-                                        }
-                                    },
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Icon(downloadIcon, downloadAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        },
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        Icon(downloadIcon, downloadAction, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
 

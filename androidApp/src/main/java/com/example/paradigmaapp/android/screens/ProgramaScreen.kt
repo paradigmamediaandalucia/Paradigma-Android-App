@@ -125,7 +125,7 @@ fun ProgramaScreen(
                     if (episode != null) {
                         // Determina si este ítem debe mostrar el indicador de carga.
                         val isLoading = episode.id == preparingEpisodeId
-
+    fun ProgramaScreen(
                         EpisodeListItem(
                             episode = episode,
                             isLoading = isLoading,
