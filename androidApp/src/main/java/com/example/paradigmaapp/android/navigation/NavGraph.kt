@@ -20,10 +20,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,6 +39,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -50,6 +53,7 @@ import androidx.navigation.navArgument
 import com.example.paradigmaapp.android.audio.AudioPlayer
 import com.example.paradigmaapp.android.audio.VolumeControl
 import com.example.paradigmaapp.android.screens.*
+import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.ui.TopNotificationBanner
 import com.example.paradigmaapp.android.ui.navigateToScreenIfDifferent
 import com.example.paradigmaapp.android.viewmodel.*
@@ -86,6 +90,7 @@ fun NavGraph(
     val isPlayingGeneral = if (currentPlayingEpisode != null) isPodcastPlaying else isAndainaPlaying
     val episodeProgress by mainViewModel.podcastProgress.collectAsState()
     val isAndainaStreamActive by mainViewModel.isAndainaStreamActive.collectAsState()
+    val shouldShowPlayer = currentPlayingEpisode != null || isAndainaStreamActive || isAndainaPlaying
     val andainaRadioInfo by mainViewModel.andainaRadioInfo.collectAsState()
     val volumeBottomSheetScaffoldState = rememberBottomSheetScaffoldState()
     val isFullScreenPlayerVisible by mainViewModel.isFullScreenPlayerVisible.collectAsState()
@@ -176,29 +181,39 @@ fun NavGraph(
                             )
                         )
                 ) {
-                    AudioPlayer(
-                        activePlayer = if (currentPlayingEpisode != null) mainViewModel.podcastExoPlayer else mainViewModel.andainaStreamPlayer.exoPlayer,
-                        currentEpisode = currentPlayingEpisode,
-                        andainaRadioInfo = andainaRadioInfo,
-                        isPlayingGeneral = isPlayingGeneral,
-                        episodeProgress = episodeProgress,
-                        onProgressChange = { newProgress -> mainViewModel.seekEpisodeTo(newProgress) },
-                        isAndainaStreamActive = isAndainaStreamActive,
-                        isAndainaPlaying = isAndainaPlaying,
-                        onPlayPauseClick = { mainViewModel.onPlayerPlayPauseClick() },
-                        onPlayStreamingClick = { mainViewModel.toggleAndainaStreamPlayer() },
-                        onEpisodeInfoClick = { mainViewModel.toggleFullScreenPlayer() },
-                        onVolumeIconClick = {
-                            coroutineScope.launch {
-                                if (volumeBottomSheetScaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
-                                    volumeBottomSheetScaffoldState.bottomSheetState.partialExpand()
-                                } else {
-                                    volumeBottomSheetScaffoldState.bottomSheetState.expand()
+                    if (shouldShowPlayer) {
+                        AudioPlayer(
+                            activePlayer = if (currentPlayingEpisode != null) mainViewModel.podcastExoPlayer else mainViewModel.andainaStreamPlayer.exoPlayer,
+                            currentEpisode = currentPlayingEpisode,
+                            andainaRadioInfo = andainaRadioInfo,
+                            isPlayingGeneral = isPlayingGeneral,
+                            episodeProgress = episodeProgress,
+                            onProgressChange = { newProgress -> mainViewModel.seekEpisodeTo(newProgress) },
+                            isAndainaStreamActive = isAndainaStreamActive,
+                            isAndainaPlaying = isAndainaPlaying,
+                            onPlayPauseClick = { mainViewModel.onPlayerPlayPauseClick() },
+                            onPlayStreamingClick = { mainViewModel.toggleAndainaStreamPlayer() },
+                            onEpisodeInfoClick = { mainViewModel.toggleFullScreenPlayer() },
+                            onVolumeIconClick = {
+                                coroutineScope.launch {
+                                    if (volumeBottomSheetScaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
+                                        volumeBottomSheetScaffoldState.bottomSheetState.partialExpand()
+                                    } else {
+                                        volumeBottomSheetScaffoldState.bottomSheetState.expand()
+                                    }
+                                }
+                            },
+                            volumeControlViewModel = volumeControlViewModel
+                        )
+                    } else {
+                        RadioQuickActionButton(
+                            onClick = {
+                                if (!isAndainaStreamActive && !isAndainaPlaying) {
+                                    mainViewModel.toggleAndainaStreamPlayer()
                                 }
                             }
-                        },
-                        volumeControlViewModel = volumeControlViewModel
-                    )
+                        )
+                    }
 
                     BottomNavigationBar(
                         navController = navController
@@ -297,6 +312,31 @@ fun NavGraph(
             topNotification?.let { (message, type) ->
                 TopNotificationBanner(message = message, type = type)
             }
+        }
+    }
+}
+
+@Composable
+private fun RadioQuickActionButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(end = 16.dp, bottom = 16.dp),
+        contentAlignment = Alignment.BottomEnd
+    ) {
+        FilledIconButton(
+            onClick = onClick,
+            modifier = Modifier.size(56.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Icon(
+                painter = painterResource(R.mipmap.streaming),
+                contentDescription = "Reproducir radio",
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

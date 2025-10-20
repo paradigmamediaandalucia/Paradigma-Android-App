@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -119,12 +120,26 @@ fun FullScreenPlayerScreen(
                 },
                 actions = {
                     currentEpisode?.let { episode ->
-                        IconButton(onClick = { overflowExpanded = true }) {
+                        IconButton(
+                            onClick = { overflowExpanded = true },
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(
+                                    if (overflowExpanded) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent
+                                )
+                        ) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
                         }
                         val isInQueue = queueEpisodeIds.contains(episode.id)
                         val isDownloaded = downloadedEpisodes.any { it.id == episode.id }
-                        DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
+                        DropdownMenu(
+                            expanded = overflowExpanded,
+                            onDismissRequest = { overflowExpanded = false },
+                            modifier = Modifier.background(
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                shape = MaterialTheme.shapes.extraSmall
+                            )
+                        ) {
                             DropdownMenuItem(
                                 text = { Text(if (isInQueue) "Quitar de la cola" else "Añadir a la cola") },
                                 leadingIcon = {
@@ -266,6 +281,17 @@ fun FullScreenPlayerScreen(
                     }
                 }
 
+                val previousButtonTint = if (hasPreviousEpisode) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                val nextButtonTint = if (hasNextEpisode) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -280,7 +306,7 @@ fun FullScreenPlayerScreen(
                             imageVector = Icons.Default.SkipPrevious,
                             contentDescription = "Episodio anterior",
                             modifier = Modifier.fillMaxSize(),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = previousButtonTint
                         )
                     }
 
@@ -305,7 +331,7 @@ fun FullScreenPlayerScreen(
                             imageVector = Icons.Default.SkipNext,
                             contentDescription = "Siguiente episodio",
                             modifier = Modifier.fillMaxSize(),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = nextButtonTint
                         )
                     }
                 }

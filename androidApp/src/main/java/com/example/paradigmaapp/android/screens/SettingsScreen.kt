@@ -1,5 +1,6 @@
 package com.example.paradigmaapp.android.screens
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,7 @@ import com.example.paradigmaapp.android.viewmodel.SettingsViewModel
  * @param settingsViewModel El ViewModel que proporciona y gestiona el estado de los ajustes.
  * @param onBackClick Lambda que se invoca cuando el usuario pulsa el botón de retroceso.
  */
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -274,7 +276,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = dataActionButtonColors
             ) {
-                Text("Visitar web de Paradigma Media")
+                Text("Visitar web de Paradigma Radio")
             }
 
             val aboutButtonColors = ButtonDefaults.buttonColors(

@@ -3,6 +3,7 @@ package com.example.paradigmaapp.android.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Color
@@ -232,7 +234,14 @@ fun EpisodeListItem(
                     .align(Alignment.CenterVertically)
                     .padding(end = 4.dp)
             ) {
-                IconButton(onClick = { showContextMenu = true }) {
+                IconButton(
+                    onClick = { showContextMenu = true },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            if (showContextMenu) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent
+                        )
+                ) {
                     Icon(
                         Icons.Filled.MoreVert,
                         contentDescription = "Opciones para ${episode.title}",
@@ -241,7 +250,11 @@ fun EpisodeListItem(
                 }
                 DropdownMenu(
                     expanded = showContextMenu,
-                    onDismissRequest = { showContextMenu = false }
+                    onDismissRequest = { showContextMenu = false },
+                    modifier = Modifier.background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = MaterialTheme.shapes.extraSmall
+                    )
                 ) {
                     if (isDownloaded) {
                         DropdownMenuItem(text = { Text("Eliminar descarga") }, onClick = { onDeleteDownload(episode); showContextMenu = false })

@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.example.paradigmaapp.android.audio.MediaAttribution
 import com.example.paradigmaapp.android.api.AndainaStream
 import com.example.paradigmaapp.android.data.AppPreferences
+import com.example.paradigmaapp.exception.Either
 import com.example.paradigmaapp.exception.Failure
 import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.model.Programa
@@ -24,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 /*
  * Enumeración de tipos de notificaciones.
@@ -60,6 +63,23 @@ class MainViewModel(
     val andainaStreamPlayer: AndainaStream,
     val volumeControlViewModel: VolumeControlViewModel
 ) : ViewModel() {
+        /**
+         * Obtiene y ordena los programas por la fecha de su último episodio.
+         */
+        private suspend fun getSortedProgramasByLatestEpisode(programas: List<Programa>): List<Programa> {
+            val programasWithLatestDate = mutableListOf<Pair<Programa, String?>>()
+            for (programa in programas) {
+                val episodesResult = repository.getEpisodes(programa.id, 0, 1)
+                val latestDate = when (episodesResult) {
+                    is com.example.paradigmaapp.exception.Either.Right -> episodesResult.b.firstOrNull()?.date
+                    else -> null
+                }
+                programasWithLatestDate += programa to latestDate
+            }
+            return programasWithLatestDate
+                .sortedByDescending { (_, date) -> date ?: "" }
+                .map { it.first }
+        }
     private companion object {
         private const val CONTEXT_EPISODE_LIMIT = 20
     }
@@ -122,6 +142,7 @@ class MainViewModel(
     val andainaRadioInfo: StateFlow<RadioInfo?> = _andainaRadioInfo.asStateFlow()
 
     private val _contextualPlaylist = MutableStateFlow<List<Episode>>(emptyList())
+    private var isRestoringPlayback = false
 
     private val playbackContext =
         ContextCompat.createAttributionContext(context, MediaAttribution.AUDIO_PLAYBACK_TAG)
@@ -152,17 +173,14 @@ class MainViewModel(
     init {
         // Lógica de inicio de la aplicación para la radio
         val shouldAutoPlayStreamOnStart = appPreferences.loadAutoPlayStreamOnStart()
-        val hasExplicitAutoPlayPreference = appPreferences.hasAutoPlayStreamOnStartPreference()
 
-        // Migración: en instalaciones anteriores, desactivar la radio en ajustes implicaba pausa.
-        if (!hasExplicitAutoPlayPreference && !shouldAutoPlayStreamOnStart && !_isAndainaStreamActive.value) {
-            _isAndainaStreamActive.value = true
-            appPreferences.saveIsStreamActive(true)
-            appPreferences.saveAutoPlayStreamOnStart(false)
-        }
-
-        if (appPreferences.loadOnboardingComplete() && _isAndainaStreamActive.value) {
-            if (shouldAutoPlayStreamOnStart) {
+        if (appPreferences.loadOnboardingComplete()) {
+            if (_isAndainaStreamActive.value) {
+                if (shouldAutoPlayStreamOnStart) {
+                    andainaStreamPlayer.play()
+                }
+            } else if (shouldAutoPlayStreamOnStart) {
+                _isAndainaStreamActive.value = true
                 andainaStreamPlayer.play()
             }
         }
@@ -202,20 +220,27 @@ class MainViewModel(
         viewModelScope.launch {
             _isLoadingProgramas.value = true
             _programasError.value = null
-            repository.getProgramas().fold(
-                { failure ->
-                    _programasError.value = when (failure) {
-                        is Failure.NetworkConnection -> "Sin conexión a internet."
-                        is Failure.ServerError -> "Error del servidor."
-                        is Failure.CustomError -> failure.message
-                        else -> "Ocurrió un error desconocido."
+            try {
+                when (val programasResult = repository.getProgramas()) {
+                    is com.example.paradigmaapp.exception.Either.Left -> {
+                        val failure = programasResult.a
+                        _programasError.value = when (failure) {
+                            is Failure.NetworkConnection -> "Sin conexión a internet."
+                            is Failure.ServerError -> "Error del servidor."
+                            is Failure.CustomError -> failure.message
+                            else -> "Ocurrió un error desconocido."
+                        }
                     }
-                },
-                { programas ->
-                    _programas.value = programas
+                    is com.example.paradigmaapp.exception.Either.Right -> {
+                        val sortedProgramas = withContext(Dispatchers.IO) {
+                            getSortedProgramasByLatestEpisode(programasResult.b)
+                        }
+                        _programas.value = sortedProgramas
+                    }
                 }
-            )
-            _isLoadingProgramas.value = false
+            } finally {
+                _isLoadingProgramas.value = false
+            }
         }
     }
 
@@ -239,20 +264,34 @@ class MainViewModel(
 
                     val savedEpisodeId = appPreferences.loadCurrentEpisodeId()
                     savedEpisodeId?.let { id ->
-                        var episodeToRestore = appPreferences.loadEpisodeDetails(id)
-                        if (episodeToRestore == null) {
-                            repository.getEpisodeDetail(id).fold(
-                                { /* Ignore failure for now */ },
-                                { episode ->
-                                    episodeToRestore = episode
-                                    episodeToRestore?.let { appPreferences.saveEpisodeDetails(it) }
-                                }
-                            )
+                        var episodeToRestore = withContext(Dispatchers.IO) {
+                            repository.getEpisodeFromCache(id)
                         }
-                        episodeToRestore?.let { episode ->
-                            val savedPosition = appPreferences.getEpisodePosition(episode.id)
-                            _currentPlayingEpisode.value = episode
-                            prepareEpisodePlayer(episode, savedPosition, playWhenReady = false)
+                        if (episodeToRestore == null) {
+                            episodeToRestore = appPreferences.loadEpisodeDetails(id)
+                        }
+                        if (episodeToRestore == null) {
+                            when (val remoteEpisodeResult = repository.getEpisodeDetail(id)) {
+                                is Either.Right -> {
+                                    val episode = remoteEpisodeResult.b
+                                    episodeToRestore = episode
+                                    withContext(Dispatchers.IO) {
+                                        repository.saveEpisode(episode)
+                                    }
+                                    appPreferences.saveEpisodeDetails(episode)
+                                }
+                                else -> {
+                                    // Ignore failure for now
+                                }
+                            }
+                        }
+                        val restoredEpisode = episodeToRestore
+                        if (restoredEpisode != null) {
+                            val savedPosition = appPreferences.getEpisodePosition(restoredEpisode.id)
+                            _currentPlayingEpisode.value = restoredEpisode
+                            prepareEpisodePlayer(restoredEpisode, savedPosition, playWhenReady = false)
+                        } else {
+                            appPreferences.saveCurrentEpisodeId(null)
                         }
                     }
                 }
@@ -283,8 +322,8 @@ class MainViewModel(
 
         _currentPlayingEpisode.value = episode
         if (andainaStreamPlayer.isPlaying()) andainaStreamPlayer.stop()
-        val savedPosition = appPreferences.getEpisodePosition(episode.id)
-        prepareEpisodePlayer(episode, savedPosition, playWhenReady)
+    val savedPosition = appPreferences.getEpisodePosition(episode.id)
+    prepareEpisodePlayer(episode, savedPosition, playWhenReady)
     }
 
     /**
@@ -309,8 +348,8 @@ class MainViewModel(
 
         val programContextList = _contextualPlaylist.value
         val indexInContextList = programContextList.indexOfFirst { it.id == episode.id }
-        if (indexInContextList != -1 && indexInContextList < programContextList.size - 1) {
-            selectEpisode(programContextList[indexInContextList + 1])
+        if (indexInContextList > 0) {
+            selectEpisode(programContextList[indexInContextList - 1])
         }
     }
 
@@ -329,8 +368,8 @@ class MainViewModel(
 
         val programContextList = _contextualPlaylist.value
         val indexInContextList = programContextList.indexOfFirst { it.id == episode.id }
-        if (indexInContextList != -1 && indexInContextList > 0) {
-            selectEpisode(programContextList[indexInContextList - 1])
+        if (indexInContextList != -1 && indexInContextList < programContextList.size - 1) {
+            selectEpisode(programContextList[indexInContextList + 1])
         }
     }
 
@@ -347,16 +386,24 @@ class MainViewModel(
             return
         }
 
+        isRestoringPlayback = !playWhenReady
         try {
             podcastExoPlayer.stop()
             podcastExoPlayer.clearMediaItems()
             podcastExoPlayer.setMediaItem(MediaItem.fromUri(mediaPath), positionMs)
             podcastExoPlayer.prepare()
             podcastExoPlayer.playWhenReady = playWhenReady
+            if (positionMs > 0L) {
+                podcastExoPlayer.seekTo(positionMs)
+            }
         } catch (e: Exception) {
             _initialDataError.value = "Error al preparar la reproducción de '${episode.title}'."
+            isRestoringPlayback = false
         } finally {
             _preparingEpisodeId.value = null
+            if (playWhenReady) {
+                isRestoringPlayback = false
+            }
         }
     }
 
@@ -386,8 +433,8 @@ class MainViewModel(
         val indexInContextList = programContextList.indexOfFirst { it.id == episode.id }
 
         if (indexInContextList != -1) {
-            _hasPreviousEpisode.value = indexInContextList > 0
-            _hasNextEpisode.value = indexInContextList < programContextList.size - 1
+            _hasNextEpisode.value = indexInContextList > 0
+            _hasPreviousEpisode.value = indexInContextList < programContextList.size - 1
             return
         }
 
@@ -448,8 +495,16 @@ class MainViewModel(
     private fun observeCurrentPlayingEpisode() {
         viewModelScope.launch {
             _currentPlayingEpisode.collect { episode ->
-                // Guardar el ID del Episode actual para restaurar estado
-                appPreferences.saveCurrentEpisodeId(episode?.id)
+                if (episode != null) {
+                    // Guardar el ID del Episode actual para restaurar estado
+                    appPreferences.saveCurrentEpisodeId(episode.id)
+                    withContext(Dispatchers.IO) {
+                        repository.saveEpisode(episode)
+                    }
+                } else if (!_isLoadingInitial.value) {
+                    // Solo limpiar el estado cuando la carga inicial ha finalizado
+                    appPreferences.saveCurrentEpisodeId(null)
+                }
 
                 if (episode != null) {
                     // Si el Episode es nuevo, carga su contexto de programa
@@ -503,6 +558,9 @@ class MainViewModel(
             }
             _isPodcastPlaying.value = isPlaying
             if (!isPlaying && podcastExoPlayer.playbackState != Player.STATE_ENDED && podcastExoPlayer.playbackState != Player.STATE_IDLE) {
+                if (isRestoringPlayback) {
+                    return
+                }
                 _currentPlayingEpisode.value?.let { episode ->
                     appPreferences.saveEpisodePosition(
                         episode.id,
@@ -514,16 +572,54 @@ class MainViewModel(
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) {
-                _currentPlayingEpisode.value?.let { episode ->
-                    appPreferences.saveEpisodePosition(episode.id, 0L)
-                    onGoingViewModel.refrescarListaEpisodesEnCurso()
-                    viewModelScope.launch {
-                        val nextEpisode = queueViewModel.dequeueNextEpisode(episode.id)
-                        if (nextEpisode != null) selectEpisode(
-                            nextEpisode,
-                            true
-                        ) else _currentPlayingEpisode.value = null
+            when (playbackState) {
+                Player.STATE_READY -> {
+                    val duration = podcastExoPlayer.duration.takeIf { it > 0 } ?: 0L
+                    if (duration > 0) {
+                        _podcastDuration.value = duration
+                        val currentPos = podcastExoPlayer.currentPosition
+                        _podcastProgress.value = (currentPos.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    }
+                    isRestoringPlayback = false
+                }
+                Player.STATE_ENDED -> {
+                    _currentPlayingEpisode.value?.let { episode ->
+                        appPreferences.saveEpisodePosition(episode.id, 0L)
+                        onGoingViewModel.refrescarListaEpisodesEnCurso()
+                        viewModelScope.launch {
+                            val queueEpisodesSnapshot = queueViewModel.queueEpisodes.value
+                            val indexInQueue = queueEpisodesSnapshot.indexOfFirst { it.id == episode.id }
+                            val queueCandidate = if (indexInQueue != -1 && indexInQueue < queueEpisodesSnapshot.size - 1) {
+                                queueEpisodesSnapshot[indexInQueue + 1]
+                            } else {
+                                null
+                            }
+
+                            if (indexInQueue != -1) {
+                                queueViewModel.removeEpisodeFromQueue(episode)
+                            }
+
+                            val shouldAutoPlayContext = appPreferences.loadAutoPlayNextEpisode()
+                            val contextCandidate = if (shouldAutoPlayContext) {
+                                val programContextList = _contextualPlaylist.value
+                                val currentIndex = programContextList.indexOfFirst { it.id == episode.id }
+                                if (currentIndex > 0) {
+                                    programContextList[currentIndex - 1]
+                                } else {
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+
+                            val nextEpisode = queueCandidate ?: contextCandidate
+
+                            if (nextEpisode != null) {
+                                selectEpisode(nextEpisode, true)
+                            } else {
+                                _currentPlayingEpisode.value = null
+                            }
+                        }
                     }
                 }
             }

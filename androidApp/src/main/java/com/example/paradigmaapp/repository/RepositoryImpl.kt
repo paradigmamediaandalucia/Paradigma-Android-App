@@ -23,6 +23,7 @@ import com.example.paradigmaapp.model.EpisodeResponse
 import com.example.paradigmaapp.model.ProgramaDetailResponse
 import com.example.paradigmaapp.model.ProgramaResponse
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import java.util.Collections
 
 class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase: AppDatabase) : Repository {
@@ -225,6 +226,14 @@ class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase
                     // noop, let caller handle empty cache scenario
                 }
             }
+        }
+    }
+
+    override suspend fun getEpisodeFromCache(episodeId: String): Episode? {
+        return try {
+            appDatabase.episodeDao().getEpisodeById(episodeId).firstOrNull()?.toEpisode()
+        } catch (_: Exception) {
+            null
         }
     }
 }

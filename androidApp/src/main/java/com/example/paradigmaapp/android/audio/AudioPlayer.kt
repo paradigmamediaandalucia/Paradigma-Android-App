@@ -98,7 +98,7 @@ fun AudioPlayer(
     val (displayText, displayImageUrl) = if (isEffectivelyLiveStream) {
         val streamImageUrl = andainaRadioInfo?.art
         val streamDisplayText = if (isAndainaPlaying || isAndainaStreamActive) {
-            "Radio en Directo"
+            "Directo 90.2 FM"
         } else {
             "Sin emisión en directo"
         }

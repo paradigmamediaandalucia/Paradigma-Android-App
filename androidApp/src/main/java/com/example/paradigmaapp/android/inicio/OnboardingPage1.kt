@@ -58,11 +58,10 @@ fun OnboardingPage1() {
         )
         Spacer(Modifier.height(24.dp))*/
         Image(
-            painter = painterResource(id = R.drawable.paradigma_inicio),
+            painter = painterResource(id = R.drawable.banner),
             contentDescription = "Logo de Paradigma Media",
             modifier = Modifier
                 .fillMaxWidth(0.8f) // Ocupa el 80% del ancho
-                .scale(scale) // Aplica la animación de escala
         )
         Spacer(Modifier.height(64.dp))
 

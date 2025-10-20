@@ -155,7 +155,7 @@ class AppPreferences(context: Context) {
 
     /** Indica si el streaming está habilitado en la interfaz (botón de la antena). */
     fun loadIsStreamActive(): Boolean {
-        return prefs.getBoolean(PREF_IS_STREAM_ACTIVE, true)
+        return prefs.getBoolean(PREF_IS_STREAM_ACTIVE, false)
     }
 
     /** Guarda si la app debe reproducir la radio automáticamente al iniciarse. */
@@ -170,9 +170,9 @@ class AppPreferences(context: Context) {
      */
     fun loadAutoPlayStreamOnStart(): Boolean {
         return if (prefs.contains(PREF_AUTO_PLAY_STREAM_ON_START)) {
-            prefs.getBoolean(PREF_AUTO_PLAY_STREAM_ON_START, true)
+            prefs.getBoolean(PREF_AUTO_PLAY_STREAM_ON_START, false)
         } else {
-            prefs.getBoolean(PREF_IS_STREAM_ACTIVE, true)
+            prefs.getBoolean(PREF_IS_STREAM_ACTIVE, false)
         }
     }
 

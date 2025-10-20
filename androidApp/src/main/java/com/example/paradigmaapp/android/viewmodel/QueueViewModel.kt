@@ -3,6 +3,7 @@ package com.example.paradigmaapp.android.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.paradigmaapp.android.data.AppPreferences
+import com.example.paradigmaapp.exception.Either
 import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.repository.Repository
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +56,7 @@ class QueueViewModel(
     fun setAllAvailableEpisodes(episodes: List<Episode>) {
         allAvailableEpisodesCache = episodes
         viewModelScope.launch(Dispatchers.IO) {
+            episodes.forEach { repository.saveEpisode(it) }
             updateQueueEpisodesListFromIds()
         }
     }
@@ -89,13 +91,24 @@ class QueueViewModel(
             val cachedEpisode = allAvailableEpisodesCache.find { it.id == id }
             if (cachedEpisode != null) {
                 episodeDetailsList.add(cachedEpisode)
-            } else {
-                repository.getEpisodeDetail(id).fold(
-                    { /* Handle error */ },
-                    { fetchedEpisode ->
-                        episodeDetailsList.add(fetchedEpisode)
-                    }
-                )
+                return@forEach
+            }
+
+            val storedEpisode = repository.getEpisodeFromCache(id)
+            if (storedEpisode != null) {
+                episodeDetailsList.add(storedEpisode)
+                return@forEach
+            }
+
+            when (val episodeResult = repository.getEpisodeDetail(id)) {
+                is Either.Right -> {
+                    val fetchedEpisode = episodeResult.b
+                    episodeDetailsList.add(fetchedEpisode)
+                    repository.saveEpisode(fetchedEpisode)
+                }
+                else -> {
+                    // No-op on failure; queue episode list skips this entry until it can be fetched.
+                }
             }
         }
         // Asegurar que los objetos Episode en _queueEpisodes sigan el orden de _queueEpisodeIds.
@@ -122,6 +135,7 @@ class QueueViewModel(
                 if (newEpisodes.none { it.id == episode.id }) { // Doble check por si acaso
                     newEpisodes.add(episode)
                 }
+                repository.saveEpisode(episode)
                 withContext(Dispatchers.Main) {
                     _queueEpisodes.value = newEpisodes
                 }
