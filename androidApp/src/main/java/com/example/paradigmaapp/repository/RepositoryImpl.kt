@@ -236,4 +236,12 @@ class RepositoryImpl(private val httpClient: HttpClient, private val appDatabase
             null
         }
     }
+
+    override suspend fun getLatestEpisodeFromCache(programId: String): Episode? {
+        return try {
+            appDatabase.episodeDao().getLatestEpisodeForProgram(programId)?.toEpisode()
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

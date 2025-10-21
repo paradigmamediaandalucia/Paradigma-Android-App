@@ -252,7 +252,7 @@ fun NavGraph(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 if (navBackStackEntry?.destination?.route !in setOf(Screen.Home.route, Screen.Search.route)) {
                     IconButton(
@@ -279,22 +279,23 @@ fun NavGraph(
                         )
                     }
                 }
-
+// Boton ajustes
                 if (!isOnSettingsScreen) {
-                    IconButton(
+                    FilledIconButton(
                         onClick = { navigateToScreenIfDifferent(navController, Screen.Settings.route) },
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(top = 12.dp)
-                            .size(24.dp)
-                            .shadow(6.dp, CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(buttonBackground, CircleShape)
+                            .align(Alignment.TopEnd)
+                            .padding(end = 0.dp, top = 4.dp)
+                            .size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
                             contentDescription = "Abrir ajustes",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }

@@ -1,6 +1,7 @@
 package com.example.paradigmaapp.android.viewmodel
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import kotlin.math.abs
 
 /*
  * Enumeración de tipos de notificaciones.
@@ -67,21 +69,23 @@ class MainViewModel(
          * Obtiene y ordena los programas por la fecha de su último episodio.
          */
         private suspend fun getSortedProgramasByLatestEpisode(programas: List<Programa>): List<Programa> {
-            val programasWithLatestDate = mutableListOf<Pair<Programa, String?>>()
-            for (programa in programas) {
-                val episodesResult = repository.getEpisodes(programa.id, 0, 1)
-                val latestDate = when (episodesResult) {
-                    is com.example.paradigmaapp.exception.Either.Right -> episodesResult.b.firstOrNull()?.date
-                    else -> null
-                }
-                programasWithLatestDate += programa to latestDate
+            if (programas.isEmpty()) return programas
+            val programasWithLatestDate = programas.map { programa ->
+                val cachedLatest = repository.getLatestEpisodeFromCache(programa.id)
+                programa to cachedLatest?.date
             }
+
+            val hasAnyDate = programasWithLatestDate.any { it.second != null }
+            if (!hasAnyDate) return programas
+
             return programasWithLatestDate
                 .sortedByDescending { (_, date) -> date ?: "" }
                 .map { it.first }
         }
     private companion object {
         private const val CONTEXT_EPISODE_LIMIT = 20
+        private const val POSITION_SAVE_INTERVAL_REALTIME_MS = 1_000L
+        private const val POSITION_SAVE_MIN_DELTA_MS = 500L
     }
 
     private val _programas = MutableStateFlow<List<Programa>>(emptyList())
@@ -143,6 +147,9 @@ class MainViewModel(
 
     private val _contextualPlaylist = MutableStateFlow<List<Episode>>(emptyList())
     private var isRestoringPlayback = false
+    private var lastPersistedEpisodeId: String? = null
+    private var lastPersistedPositionMs: Long = -1L
+    private var lastPersistedRealtimeMs: Long = 0L
 
     private val playbackContext =
         ContextCompat.createAttributionContext(context, MediaAttribution.AUDIO_PLAYBACK_TAG)
@@ -221,7 +228,10 @@ class MainViewModel(
             _isLoadingProgramas.value = true
             _programasError.value = null
             try {
-                when (val programasResult = repository.getProgramas()) {
+                val programasResult = withContext(Dispatchers.IO) {
+                    repository.getProgramas()
+                }
+                when (programasResult) {
                     is com.example.paradigmaapp.exception.Either.Left -> {
                         val failure = programasResult.a
                         _programasError.value = when (failure) {
@@ -232,10 +242,16 @@ class MainViewModel(
                         }
                     }
                     is com.example.paradigmaapp.exception.Either.Right -> {
-                        val sortedProgramas = withContext(Dispatchers.IO) {
-                            getSortedProgramasByLatestEpisode(programasResult.b)
+                        val programas = programasResult.b
+                        _programas.value = programas
+                        viewModelScope.launch(Dispatchers.IO) {
+                            val sortedProgramas = getSortedProgramasByLatestEpisode(programas)
+                            if (sortedProgramas !== programas && sortedProgramas.isNotEmpty()) {
+                                withContext(Dispatchers.Main) {
+                                    _programas.value = sortedProgramas
+                                }
+                            }
                         }
-                        _programas.value = sortedProgramas
                     }
                 }
             } finally {
@@ -249,16 +265,21 @@ class MainViewModel(
         viewModelScope.launch {
             _isLoadingInitial.value = true
             _initialDataError.value = null
-            repository.getSavedEpisodes().fold(
-                { failure ->
+            val savedEpisodesResult = withContext(Dispatchers.IO) {
+                repository.getSavedEpisodes()
+            }
+            when (savedEpisodesResult) {
+                is Either.Left -> {
+                    val failure = savedEpisodesResult.a
                     _initialDataError.value = when (failure) {
                         is Failure.NetworkConnection -> "Sin conexión a internet."
                         is Failure.ServerError -> "Error del servidor."
                         is Failure.CustomError -> failure.message
                         else -> "No se pudieron cargar los últimos episodios."
                     }
-                },
-                { episodes ->
+                }
+                is Either.Right -> {
+                    val episodes = savedEpisodesResult.b
                     _initialEpisodes.value = episodes
                     queueViewModel.setAllAvailableEpisodes(episodes)
 
@@ -271,7 +292,10 @@ class MainViewModel(
                             episodeToRestore = appPreferences.loadEpisodeDetails(id)
                         }
                         if (episodeToRestore == null) {
-                            when (val remoteEpisodeResult = repository.getEpisodeDetail(id)) {
+                            val remoteEpisodeResult = withContext(Dispatchers.IO) {
+                                repository.getEpisodeDetail(id)
+                            }
+                            when (remoteEpisodeResult) {
                                 is Either.Right -> {
                                     val episode = remoteEpisodeResult.b
                                     episodeToRestore = episode
@@ -295,7 +319,7 @@ class MainViewModel(
                         }
                     }
                 }
-            )
+            }
             _isLoadingInitial.value = false
         }
     }
@@ -396,6 +420,9 @@ class MainViewModel(
             if (positionMs > 0L) {
                 podcastExoPlayer.seekTo(positionMs)
             }
+            lastPersistedEpisodeId = episode.id
+            lastPersistedPositionMs = positionMs
+            lastPersistedRealtimeMs = SystemClock.elapsedRealtime()
         } catch (e: Exception) {
             _initialDataError.value = "Error al preparar la reproducción de '${episode.title}'."
             isRestoringPlayback = false
@@ -405,6 +432,38 @@ class MainViewModel(
                 isRestoringPlayback = false
             }
         }
+    }
+
+    private fun maybePersistPlaybackPosition(episode: Episode, positionMs: Long) {
+        if (positionMs < 0L) return
+        val now = SystemClock.elapsedRealtime()
+        if (lastPersistedEpisodeId != episode.id) {
+            lastPersistedEpisodeId = episode.id
+            lastPersistedPositionMs = -1L
+            lastPersistedRealtimeMs = 0L
+        }
+
+        val positionDelta = if (lastPersistedPositionMs >= 0L) {
+            abs(positionMs - lastPersistedPositionMs)
+        } else {
+            Long.MAX_VALUE
+        }
+        val shouldPersistByDelta = positionDelta >= POSITION_SAVE_MIN_DELTA_MS
+        val shouldPersistByTime = now - lastPersistedRealtimeMs >= POSITION_SAVE_INTERVAL_REALTIME_MS
+
+        if (shouldPersistByDelta || shouldPersistByTime) {
+            appPreferences.saveEpisodePosition(episode.id, positionMs)
+            lastPersistedPositionMs = positionMs
+            lastPersistedRealtimeMs = now
+            lastPersistedEpisodeId = episode.id
+        }
+    }
+
+    private fun persistPlaybackPositionImmediate(episode: Episode, positionMs: Long) {
+        appPreferences.saveEpisodePosition(episode.id, positionMs)
+        lastPersistedEpisodeId = episode.id
+        lastPersistedPositionMs = positionMs
+        lastPersistedRealtimeMs = SystemClock.elapsedRealtime()
     }
 
     /**
@@ -461,9 +520,13 @@ class MainViewModel(
      */
     fun toggleAndainaStreamPlayer() {
         // Detiene cualquier reproducción de podcast antes de activar la radio
-        if (_currentPlayingEpisode.value != null) {
+        _currentPlayingEpisode.value?.let { episode ->
+            persistPlaybackPositionImmediate(episode, podcastExoPlayer.currentPosition)
             podcastExoPlayer.stop()
             _currentPlayingEpisode.value = null
+            lastPersistedEpisodeId = null
+            lastPersistedPositionMs = -1L
+            lastPersistedRealtimeMs = 0L
         }
 
         val newActiveState = !_isAndainaStreamActive.value
@@ -482,9 +545,16 @@ class MainViewModel(
      * @param progressFraction La nueva posición como una fracción (0.0 a 1.0) de la duración total.
      */
     fun seekEpisodeTo(progressFraction: Float) {
+        val currentEpisode = _currentPlayingEpisode.value ?: return
         val currentDuration = podcastExoPlayer.duration
-        if (_currentPlayingEpisode.value != null && currentDuration > 0 && currentDuration != C.TIME_UNSET) {
-            podcastExoPlayer.seekTo((progressFraction * currentDuration).toLong())
+        if (currentDuration > 0 && currentDuration != C.TIME_UNSET) {
+            val newPosition = (progressFraction * currentDuration).toLong()
+            podcastExoPlayer.seekTo(newPosition)
+            if (podcastExoPlayer.isPlaying) {
+                maybePersistPlaybackPosition(currentEpisode, newPosition)
+            } else {
+                persistPlaybackPositionImmediate(currentEpisode, newPosition)
+            }
         }
     }
 
@@ -562,10 +632,8 @@ class MainViewModel(
                     return
                 }
                 _currentPlayingEpisode.value?.let { episode ->
-                    appPreferences.saveEpisodePosition(
-                        episode.id,
-                        podcastExoPlayer.currentPosition
-                    )
+                    val currentPos = podcastExoPlayer.currentPosition
+                    persistPlaybackPositionImmediate(episode, currentPos)
                     onGoingViewModel.addOrUpdateOnGoingEpisode(episode)
                 }
             }
@@ -584,7 +652,7 @@ class MainViewModel(
                 }
                 Player.STATE_ENDED -> {
                     _currentPlayingEpisode.value?.let { episode ->
-                        appPreferences.saveEpisodePosition(episode.id, 0L)
+                        persistPlaybackPositionImmediate(episode, 0L)
                         onGoingViewModel.refrescarListaEpisodesEnCurso()
                         viewModelScope.launch {
                             val queueEpisodesSnapshot = queueViewModel.queueEpisodes.value
@@ -618,6 +686,9 @@ class MainViewModel(
                                 selectEpisode(nextEpisode, true)
                             } else {
                                 _currentPlayingEpisode.value = null
+                                lastPersistedEpisodeId = null
+                                lastPersistedPositionMs = -1L
+                                lastPersistedRealtimeMs = 0L
                             }
                         }
                     }
@@ -649,9 +720,8 @@ class MainViewModel(
                     _podcastProgress.value =
                         if (duration > 0) currentPos.toFloat() / duration.toFloat() else 0f
                     _currentPlayingEpisode.value?.let { episode ->
-                        onGoingViewModel.addOrUpdateOnGoingEpisode(
-                            episode
-                        )
+                        onGoingViewModel.addOrUpdateOnGoingEpisode(episode)
+                        maybePersistPlaybackPosition(episode, currentPos)
                     }
                 }
                 _isAndainaPlaying.value = andainaStreamPlayer.isPlaying()
@@ -684,7 +754,7 @@ class MainViewModel(
         super.onCleared()
         _currentPlayingEpisode.value?.let { episode ->
             if (podcastExoPlayer.playbackState != Player.STATE_IDLE) {
-                appPreferences.saveEpisodePosition(episode.id, podcastExoPlayer.currentPosition)
+                persistPlaybackPositionImmediate(episode, podcastExoPlayer.currentPosition)
                 appPreferences.saveEpisodeDetails(episode)
             }
         }
@@ -702,10 +772,15 @@ class MainViewModel(
      * @param millis Milisegundos a adelantar (por defecto 30 segundos).
      */
     fun skipForward(millis: Long = 30000) {
-        if (_currentPlayingEpisode.value != null) {
+        _currentPlayingEpisode.value?.let { episode ->
             val newPosition =
                 (podcastExoPlayer.currentPosition + millis).coerceAtMost(podcastExoPlayer.duration)
             podcastExoPlayer.seekTo(newPosition)
+            if (podcastExoPlayer.isPlaying) {
+                maybePersistPlaybackPosition(episode, newPosition)
+            } else {
+                persistPlaybackPositionImmediate(episode, newPosition)
+            }
         }
     }
 
@@ -715,9 +790,14 @@ class MainViewModel(
      * @param millis Milisegundos a retroceder (por defecto 10 segundos).
      */
     fun rewind(millis: Long = 10000) {
-        if (_currentPlayingEpisode.value != null) {
+        _currentPlayingEpisode.value?.let { episode ->
             val newPosition = (podcastExoPlayer.currentPosition - millis).coerceAtLeast(0)
             podcastExoPlayer.seekTo(newPosition)
+            if (podcastExoPlayer.isPlaying) {
+                maybePersistPlaybackPosition(episode, newPosition)
+            } else {
+                persistPlaybackPositionImmediate(episode, newPosition)
+            }
         }
     }
 }

@@ -20,4 +20,7 @@ interface EpisodeDao {
 
     @Query("DELETE FROM episodes WHERE episodeId = :episodeId")
     suspend fun deleteEpisodeById(episodeId: String)
+
+    @Query("SELECT * FROM episodes WHERE showId = :programId ORDER BY publishedAt DESC LIMIT 1")
+    suspend fun getLatestEpisodeForProgram(programId: String): EpisodeEntity?
 }

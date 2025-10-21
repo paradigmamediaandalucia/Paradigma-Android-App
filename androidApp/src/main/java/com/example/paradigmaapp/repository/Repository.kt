@@ -15,4 +15,5 @@ interface Repository {
     suspend fun deleteEpisode(episodeId: String)
     suspend fun searchEpisodes(query: String): Either<Failure, List<Episode>>
     suspend fun getEpisodeFromCache(episodeId: String): Episode?
+    suspend fun getLatestEpisodeFromCache(programId: String): Episode?
 }
