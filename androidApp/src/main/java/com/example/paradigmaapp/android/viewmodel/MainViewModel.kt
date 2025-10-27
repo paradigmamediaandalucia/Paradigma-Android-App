@@ -246,9 +246,14 @@ class MainViewModel(
                         _programas.value = programas
                         viewModelScope.launch(Dispatchers.IO) {
                             val sortedProgramas = getSortedProgramasByLatestEpisode(programas)
-                            if (sortedProgramas !== programas && sortedProgramas.isNotEmpty()) {
+                            // Filtra los programas que no tengan episodios
+                            val filteredProgramas = sortedProgramas.filter { programa ->
+                                val latest = repository.getLatestEpisodeFromCache(programa.id)
+                                latest != null
+                            }
+                            if (filteredProgramas !== programas && filteredProgramas.isNotEmpty()) {
                                 withContext(Dispatchers.Main) {
-                                    _programas.value = sortedProgramas
+                                    _programas.value = filteredProgramas
                                 }
                             }
                         }

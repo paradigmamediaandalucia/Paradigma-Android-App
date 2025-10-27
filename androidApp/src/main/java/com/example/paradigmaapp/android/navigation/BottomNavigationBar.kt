@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -36,7 +37,7 @@ fun BottomNavigationBar(
     val navItems = listOf(
         BottomNavItem.Search,
         BottomNavItem.OnGoing,
-        BottomNavItem.Home, // Home is always in the center
+        BottomNavItem.Home,
         BottomNavItem.Downloads,
         BottomNavItem.Queue
     )
@@ -56,7 +57,14 @@ fun BottomNavigationBar(
             val labelText = stringResource(id = item.titleRes)
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = labelText) },
-                label = { Text(labelText) },
+                label = {
+                    Text(
+                        labelText,
+                        maxLines = 1,
+                        fontSize = 11.sp,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Clip
+                    )
+                },
                 selected = currentRoute == item.route,
                 onClick = {
                     if (item is BottomNavItem.Home) {

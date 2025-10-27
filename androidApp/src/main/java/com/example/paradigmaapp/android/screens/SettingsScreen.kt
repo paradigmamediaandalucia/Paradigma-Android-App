@@ -80,18 +80,7 @@ fun SettingsScreen(
     val websiteUrl = settingsViewModel.mainWebsiteUrl
     val isProgramListMode by settingsViewModel.isProgramListMode.collectAsState()
     val aboutText = """
-        Paradigma Media Andalucía (en adelante Paradigma) es una iniciativa ciudadana que surge de la necesidad de cubrir las carencias incuestionables que tiene la sociedad en general, y la cordobesa en particular, sobre la información que le afecta de primera mano.
-
-        Paradigma tiene entidad sin ánimo de lucro. Todo lo recaudado por la Asociación será dirigido a conseguir los medios técnicos y humanos necesarios para mantener la mínima calidad exigible a un medio de comunicación en manos de la ciudadanía.
-
-        Los contenidos de nuestros medios de comunicación serán de eminente carácter social. De hecho, servirán para dar voz a todos los colectivos sociales que quieran usarlos para dar a conocer sus problemáticas, sus luchas, sus denuncias, sus obstáculos, sus relaciones con las instituciones. Asimismo, se elaborarán contenidos en los que se explique de forma exhaustiva los procesos sociales, legales, laborales y, en general, políticos, que afectan de primera mano a la sociedad. También habrá programas de diversión, infantiles, de participación directa de la audiencia.
-
-        Paradigma comienza en Córdoba, aunque nuestro proyecto ampara la colaboración y extensión por toda Andalucía. Paradigma constará de tres medios de comunicación:
-           • Paradigma Radio, que emitirá tanto en FM como en streaming a través de internet, en directo.
-           • Paradigma TV, que emitirá a través del canal de YouTube "Paradigma TV Andalucía".
-           • Paradigma Prensa. Se trata de un periódico diario digital.
-
-        Todas nuestras producciones se harán y distribuirán bajo licencia de Creative Commons.
+          Paradigma Media Andalucía es una asociación sin ánimo lucro radicada en Córdoba, que sirve de plataforma comunicativa a los colectivos sociales, asociaciones y organizaciones, principalmente de nuestra ciudad, que necesitan poder expresar sus necesidades de forma continuada en el tiempo y sin cortapisas de ningún tipo, y que no tienen esa oportunidad en los medios de comunicación públicos y comerciales.
     """.trimIndent()
     var isAboutExpanded by remember { mutableStateOf(false) }
 

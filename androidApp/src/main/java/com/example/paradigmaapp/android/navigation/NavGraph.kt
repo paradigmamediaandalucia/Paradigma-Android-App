@@ -252,7 +252,7 @@ fun NavGraph(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .padding(horizontal = 0.dp, vertical = 4.dp)
             ) {
                 if (navBackStackEntry?.destination?.route !in setOf(Screen.Home.route, Screen.Search.route)) {
                     IconButton(
@@ -267,6 +267,7 @@ fun NavGraph(
                         },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
+                            .padding(start = 10.dp)
                             .size(44.dp)
                             .shadow(6.dp, CircleShape, clip = false)
                             .clip(CircleShape)
@@ -285,17 +286,18 @@ fun NavGraph(
                         onClick = { navigateToScreenIfDifferent(navController, Screen.Settings.route) },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = 0.dp, top = 4.dp)
+                            .padding(end = 10.dp, top = 4.dp)
                             .size(56.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
                             contentDescription = "Abrir ajustes",
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
