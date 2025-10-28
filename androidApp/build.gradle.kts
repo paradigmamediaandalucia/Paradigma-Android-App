@@ -22,8 +22,8 @@ android {
         applicationId = "org.paradigmamedia.paradigmaapp" // ID único de la app
         minSdk = 28 // Mínima versión de Android soportada
         targetSdk = 35 // SDK objetivo
-    versionCode = 3 // Código de versión para releases
-    versionName = "1.02" // Nombre de versión visible
+        versionCode = 4 // Código de versión para releases
+        versionName = "1.03" // Nombre de versión visible
     }
 
     buildFeatures {

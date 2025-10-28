@@ -55,6 +55,7 @@ import com.example.paradigmaapp.android.audio.VolumeControl
 import com.example.paradigmaapp.android.screens.*
 import com.example.paradigmaapp.android.R
 import com.example.paradigmaapp.android.ui.TopNotificationBanner
+import com.example.paradigmaapp.android.ui.UpdateBanner
 import com.example.paradigmaapp.android.ui.navigateToScreenIfDifferent
 import com.example.paradigmaapp.android.viewmodel.*
 import kotlinx.coroutines.launch
@@ -114,8 +115,12 @@ fun NavGraph(
             }
         }.getOrNull() ?: "Desconocido"
     }
+    val updateAvailable by mainViewModel.updateAvailable.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (updateAvailable != null) {
+            UpdateBanner(latestVersion = updateAvailable!!, modifier = Modifier.align(Alignment.TopCenter))
+        }
         BottomSheetScaffold(
             scaffoldState = volumeBottomSheetScaffoldState,
             sheetContent = {

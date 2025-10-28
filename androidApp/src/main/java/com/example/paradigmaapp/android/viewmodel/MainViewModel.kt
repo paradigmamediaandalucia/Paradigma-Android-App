@@ -19,6 +19,8 @@ import com.example.paradigmaapp.model.Episode
 import com.example.paradigmaapp.model.Programa
 import com.example.paradigmaapp.model.RadioInfo
 import com.example.paradigmaapp.repository.Repository
+import com.example.paradigmaapp.android.utils.LatestVersionProvider
+import com.example.paradigmaapp.android.utils.UpdateChecker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,23 +67,41 @@ class MainViewModel(
     val andainaStreamPlayer: AndainaStream,
     val volumeControlViewModel: VolumeControlViewModel
 ) : ViewModel() {
-        /**
-         * Obtiene y ordena los programas por la fecha de su último episodio.
-         */
-        private suspend fun getSortedProgramasByLatestEpisode(programas: List<Programa>): List<Programa> {
-            if (programas.isEmpty()) return programas
-            val programasWithLatestDate = programas.map { programa ->
-                val cachedLatest = repository.getLatestEpisodeFromCache(programa.id)
-                programa to cachedLatest?.date
-            }
+    // Estado para la notificación de actualización
+    private val _updateAvailable = MutableStateFlow<String?>(null)
+    val updateAvailable: StateFlow<String?> get() = _updateAvailable.asStateFlow()
+    init {
+        checkForUpdate()
+    }
 
-            val hasAnyDate = programasWithLatestDate.any { it.second != null }
-            if (!hasAnyDate) return programas
-
-            return programasWithLatestDate
-                .sortedByDescending { (_, date) -> date ?: "" }
-                .map { it.first }
+    private fun checkForUpdate() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val latestVersion = LatestVersionProvider.fetchLatestVersion()
+                val installedVersion = UpdateChecker.getInstalledVersionName(context)
+                if (!latestVersion.isNullOrBlank() && installedVersion != latestVersion) {
+                    _updateAvailable.value = latestVersion
+                }
+            } catch (_: Exception) {}
         }
+    }
+    /**
+     * Obtiene y ordena los programas por la fecha de su último episodio.
+     */
+    private suspend fun getSortedProgramasByLatestEpisode(programas: List<Programa>): List<Programa> {
+        if (programas.isEmpty()) return programas
+        val programasWithLatestDate = programas.map { programa ->
+            val cachedLatest = repository.getLatestEpisodeFromCache(programa.id)
+            programa to cachedLatest?.date
+        }
+
+        val hasAnyDate = programasWithLatestDate.any { it.second != null }
+        if (!hasAnyDate) return programas
+
+        return programasWithLatestDate
+            .sortedByDescending { (_, date) -> date ?: "" }
+            .map { it.first }
+    }
     private companion object {
         private const val CONTEXT_EPISODE_LIMIT = 20
         private const val POSITION_SAVE_INTERVAL_REALTIME_MS = 1_000L
@@ -246,15 +266,8 @@ class MainViewModel(
                         _programas.value = programas
                         viewModelScope.launch(Dispatchers.IO) {
                             val sortedProgramas = getSortedProgramasByLatestEpisode(programas)
-                            // Filtra los programas que no tengan episodios
-                            val filteredProgramas = sortedProgramas.filter { programa ->
-                                val latest = repository.getLatestEpisodeFromCache(programa.id)
-                                latest != null
-                            }
-                            if (filteredProgramas !== programas && filteredProgramas.isNotEmpty()) {
-                                withContext(Dispatchers.Main) {
-                                    _programas.value = filteredProgramas
-                                }
+                            withContext(Dispatchers.Main) {
+                                _programas.value = sortedProgramas
                             }
                         }
                     }
